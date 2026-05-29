@@ -48,12 +48,13 @@ export default function Auth({ onClose }: { onClose?: () => void }) {
       return
     }
 
+    if (!isForgot && !password) {
+      setErrorMessage('Please enter a password.')
+      setLoading(false)
+      return
+    }
+
     if (isRegister) {
-      if (!password) {
-        setErrorMessage('Please enter a password.')
-        setLoading(false)
-        return
-      }
       if (password !== confirmPassword) {
         setErrorMessage('Passwords do not match.')
         setLoading(false)
