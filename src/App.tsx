@@ -81,6 +81,8 @@ function AppContent() {
             <Auth onClose={() => setShowAuth(false)} />
           </div>
         )}
+
+        {user && <div className="mt-8">{pageElement}</div>}
       </main>
       <ReminderScheduler />
     </div>

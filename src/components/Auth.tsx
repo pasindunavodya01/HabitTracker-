@@ -85,9 +85,9 @@ export default function Auth({ onClose }: { onClose?: () => void }) {
 
         if (!authResult.data?.session) {
           setStatusMessage(isRegister ? 'Check your email to confirm your new account.' : 'Signed in successfully.')
+        } else {
+          onClose && onClose()
         }
-
-        onClose && onClose()
       }
 
       setEmail('')
