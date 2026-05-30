@@ -128,12 +128,26 @@ export default function Today() {
     ? 'Great work! You completed every item on today’s checklist.'
     : `Nice progress — you’ve completed ${completedCount} of ${totalCount} habits today.`
 
-  const dailyHabits = habits.filter((h) => h.kind !== 'task' && h.kind !== 'goal')
-  const dailyTasks = habits.filter((h) => h.kind === 'task' || h.kind === 'goal')
+  const dailyHabits = habits.filter((h) => h.kind === 'habit' || h.kind === 'routine')
+  const avoidHabits = habits.filter((h) => h.kind === 'bad_habit')
+  const dailyTasks = habits.filter((h) => h.kind === 'task')
+  const dailyGoals = habits.filter((h) => h.kind === 'goal')
 
   const renderCard = (habit: Habit) => {
     const isCompleted = completedHabitIds.has(habit.id)
     const saving = savingHabitIds.has(habit.id)
+
+    let buttonText = 'Complete'
+    let doneText = '✓ Done'
+    if (habit.kind === 'task') {
+      buttonText = 'Complete Task'
+    } else if (habit.kind === 'goal') {
+      buttonText = 'Update Progress'
+    } else if (habit.kind === 'bad_habit') {
+      buttonText = 'Stayed Clean'
+      doneText = '✓ Stayed Clean'
+    }
+
     return (
       <div key={habit.id} className={`rounded-3xl border p-5 shadow-sm transition-colors ${isCompleted ? 'border-emerald-100 bg-emerald-50/50' : 'border-slate-200 bg-white'}`}>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -147,7 +161,7 @@ export default function Today() {
             disabled={isCompleted || saving}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-600 text-white hover:bg-blue-700'} ${saving ? 'opacity-70' : ''}`}
           >
-            {isCompleted ? '✓ Done' : saving ? 'Saving...' : (habit.kind === 'task' || habit.kind === 'goal') ? 'Tick off' : 'Complete'}
+            {isCompleted ? doneText : saving ? 'Saving...' : buttonText}
           </button>
         </div>
       </div>
@@ -182,10 +196,24 @@ export default function Today() {
                 </div>
               )}
 
+              {avoidHabits.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-slate-700">Avoid Habits</h3>
+                  {avoidHabits.map(renderCard)}
+                </div>
+              )}
+
               {dailyTasks.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-700">Today's Tasks & Goals</h3>
+                  <h3 className="text-lg font-semibold text-slate-700">Tasks</h3>
                   {dailyTasks.map(renderCard)}
+                </div>
+              )}
+
+              {dailyGoals.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-slate-700">Goal Progress</h3>
+                  {dailyGoals.map(renderCard)}
                 </div>
               )}
           </div>

@@ -10,7 +10,7 @@ import Reminders from './pages/Reminders'
 
 const pages = [
   { key: 'today', label: 'Today', component: <Today /> },
-  { key: 'habits', label: 'My Habits', component: <MyHabits /> },
+  { key: 'habits', label: 'My Items', component: <MyHabits /> },
   { key: 'progress', label: 'Progress', component: <Progress /> },
   { key: 'analytics', label: 'Analytics', component: <Analytics /> },
   { key: 'reminders', label: 'Reminders', component: <Reminders /> },

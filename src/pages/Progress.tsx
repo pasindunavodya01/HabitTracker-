@@ -7,13 +7,14 @@ export default function Progress() {
   const { user } = useAuth()
   const [dailyCount, setDailyCount] = useState<{ date: string; count: number }[]>([])
   const [loading, setLoading] = useState(true)
+  const [timeRange, setTimeRange] = useState<'weekly' | 'monthly' | 'all_time'>('weekly')
 
   useEffect(() => {
     if (!user) return
 
     async function loadProgress() {
       setLoading(true)
-      const days = 14
+      const days = timeRange === 'weekly' ? 7 : timeRange === 'monthly' ? 30 : 90
       const dates = getDateRange(days)
       const startDate = new Date(dates[0])
       startDate.setHours(0, 0, 0, 0)
@@ -26,7 +27,7 @@ export default function Progress() {
     }
 
     loadProgress()
-  }, [user])
+  }, [user, timeRange])
 
   const { current, longest } = useMemo(() => calculateStreaks(dailyCount), [dailyCount])
   const consistency = useMemo(() => calculateConsistency(dailyCount), [dailyCount])
@@ -47,24 +48,48 @@ export default function Progress() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-xl font-semibold">Progress</h2>
-            <p className="mt-2 text-gray-600">Streaks, completion trends, and consistency for the last two weeks.</p>
+            <p className="mt-2 text-gray-600">Track your habit streaks, task completions, and goal progress.</p>
           </div>
           <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm">Consistency {consistency}%</div>
         </div>
+        
+        <div className="mt-6 flex space-x-2">
+          {[
+            { id: 'weekly', label: 'Weekly' },
+            { id: 'monthly', label: 'Monthly' },
+            { id: 'all_time', label: 'All Time' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setTimeRange(tab.id as any)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${timeRange === tab.id ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-wide text-slate-500">Current streak</p>
+          <p className="text-sm uppercase tracking-wide text-slate-500">Habit Streaks</p>
           <p className="mt-3 text-3xl font-semibold text-slate-900">{current}d</p>
+          <p className="mt-1 text-sm text-gray-500">Current average</p>
         </div>
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-wide text-slate-500">Longest streak</p>
+          <p className="text-sm uppercase tracking-wide text-slate-500">Clean Streaks</p>
           <p className="mt-3 text-3xl font-semibold text-slate-900">{longest}d</p>
+          <p className="mt-1 text-sm text-gray-500">Avoid habits</p>
         </div>
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-wide text-slate-500">Completions</p>
+          <p className="text-sm uppercase tracking-wide text-slate-500">Task Completion</p>
           <p className="mt-3 text-3xl font-semibold text-slate-900">{totalCompleted}</p>
+          <p className="mt-1 text-sm text-gray-500">Tasks done</p>
+        </div>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-wide text-slate-500">Goal Progress</p>
+          <p className="mt-3 text-3xl font-semibold text-slate-900">{consistency}%</p>
+          <p className="mt-1 text-sm text-gray-500">Average progress</p>
         </div>
       </div>
 

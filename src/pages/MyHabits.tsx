@@ -11,24 +11,16 @@ type Habit = {
   metadata?: any
 }
 
-const kinds = [
-  { value: 'habit', label: 'Habit' },
-  { value: 'routine', label: 'Routine' },
-  { value: 'task', label: 'Task' },
-  { value: 'bad_habit', label: 'Bad Habit' },
-  { value: 'goal', label: 'Goal' },
-]
-
 export default function MyHabits() {
   const { user } = useAuth()
   const [habits, setHabits] = useState<Habit[]>([])
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [kind, setKind] = useState('habit')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([0, 1, 2, 3, 4, 5, 6])
   const [targetDate, setTargetDate] = useState('')
+  const [activeTab, setActiveTab] = useState('habit')
 
   const DAYS = [
     { label: 'S', value: 0 },
@@ -48,7 +40,7 @@ export default function MyHabits() {
       const { data } = await supabase
         .from('habits')
         .select('id, title, description, kind, is_archived, metadata')
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .eq('is_archived', false)
       const sorted = (data ?? []).sort((a, b) => (a.metadata?.order_index ?? 999) - (b.metadata?.order_index ?? 999))
       setHabits(sorted)
@@ -65,7 +57,7 @@ export default function MyHabits() {
 
     const metadata = {
       order_index: habits.length,
-      ...(kind === 'task' || kind === 'goal' ? { target_date: targetDate || null } : { days_of_week: daysOfWeek }),
+      ...(activeTab === 'task' || activeTab === 'goal' ? { target_date: targetDate || null } : { days_of_week: daysOfWeek }),
     }
 
     const { error } = await supabase.from('habits').insert([
@@ -73,7 +65,7 @@ export default function MyHabits() {
         user_id: user.id,
         title: title.trim(),
         description: description.trim() || null,
-        kind,
+        kind: activeTab,
         metadata,
       },
     ])
@@ -82,7 +74,6 @@ export default function MyHabits() {
     if (!error) {
       setTitle('')
       setDescription('')
-      setKind('habit')
       setDaysOfWeek([0, 1, 2, 3, 4, 5, 6])
       setTargetDate('')
       const { data } = await supabase
@@ -101,54 +92,92 @@ export default function MyHabits() {
     setHabits((current) => current.filter((habit) => habit.id !== habitId))
   }
 
-  const handleMove = async (index: number, direction: 'up' | 'down') => {
+  const filteredHabits = habits.filter(h => {
+    if (activeTab === 'habit') return h.kind === 'habit' || h.kind === 'routine'
+    if (activeTab === 'bad_habit') return h.kind === 'bad_habit'
+    if (activeTab === 'task') return h.kind === 'task'
+    if (activeTab === 'goal') return h.kind === 'goal'
+    return false
+  })
+
+  const handleMove = async (habitId: string, direction: 'up' | 'down') => {
+    const index = filteredHabits.findIndex(h => h.id === habitId)
+    if (index === -1) return
     if (direction === 'up' && index === 0) return
-    if (direction === 'down' && index === habits.length - 1) return
+    if (direction === 'down' && index === filteredHabits.length - 1) return
 
-    const newHabits = [...habits]
     const targetIndex = direction === 'up' ? index - 1 : index + 1
+    const habit = filteredHabits[index]
+    const targetHabit = filteredHabits[targetIndex]
 
-    const temp = newHabits[index]
-    newHabits[index] = newHabits[targetIndex]
-    newHabits[targetIndex] = temp
+    const habitOrder = habit.metadata?.order_index ?? index
+    const targetOrder = targetHabit.metadata?.order_index ?? targetIndex
 
-    const updates = newHabits.map((h, i) => ({
-      ...h,
-      metadata: { ...(h.metadata || {}), order_index: i },
-    }))
+    const newHabitMetadata = { ...habit.metadata, order_index: targetOrder }
+    const newTargetMetadata = { ...targetHabit.metadata, order_index: habitOrder }
 
-    setHabits(updates)
+    setHabits(current => current.map(h => {
+      if (h.id === habit.id) return { ...h, metadata: newHabitMetadata }
+      if (h.id === targetHabit.id) return { ...h, metadata: newTargetMetadata }
+      return h
+    }).sort((a, b) => (a.metadata?.order_index ?? 999) - (b.metadata?.order_index ?? 999)))
 
-    updates.forEach(async (h) => {
-      await supabase.from('habits').update({ metadata: h.metadata }).eq('id', h.id)
-    })
+    await supabase.from('habits').update({ metadata: newHabitMetadata }).eq('id', habit.id)
+    await supabase.from('habits').update({ metadata: newTargetMetadata }).eq('id', targetHabit.id)
+  }
+
+  const tabLabel = () => {
+    switch(activeTab) {
+      case 'habit': return 'Habit'
+      case 'bad_habit': return 'Avoid Habit'
+      case 'task': return 'Task'
+      case 'goal': return 'Goal'
+      default: return 'Item'
+    }
   }
 
   return (
     <section className="space-y-6">
       <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
         <div>
-          <h2 className="text-xl font-semibold">My Habits</h2>
+          <h2 className="text-xl font-semibold">My Items</h2>
           <p className="mt-2 text-gray-600">Create, categorize, and archive your routines, habits, and tasks.</p>
         </div>
       </div>
 
+      <div className="flex space-x-4 border-b border-slate-200">
+        {[
+          { id: 'habit', label: 'Habits' },
+          { id: 'bad_habit', label: 'Avoid Habits' },
+          { id: 'task', label: 'Tasks' },
+          { id: 'goal', label: 'Goals' }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`py-2 px-4 border-b-2 font-semibold transition-colors ${activeTab === tab.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold">Your habits</h3>
+          <h3 className="text-lg font-semibold">Your {tabLabel()}s</h3>
           {loading ? (
-            <p className="mt-4 text-gray-500">Loading habits…</p>
-          ) : habits.length === 0 ? (
-            <p className="mt-4 text-gray-500">No habits yet. Add one to start tracking.</p>
+            <p className="mt-4 text-gray-500">Loading {tabLabel().toLowerCase()}s…</p>
+          ) : filteredHabits.length === 0 ? (
+            <p className="mt-4 text-gray-500">No {tabLabel().toLowerCase()}s yet. Add one to start tracking.</p>
           ) : (
             <div className="mt-4 space-y-3">
-            {habits.map((habit, index) => (
+            {filteredHabits.map((habit, index) => (
                 <div key={habit.id} className="rounded-3xl border border-slate-200 p-4">
                   <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="flex flex-col items-center">
-                      <button onClick={() => handleMove(index, 'up')} disabled={index === 0} className="pb-1 text-xs leading-none text-slate-400 hover:text-slate-700 disabled:opacity-30">▲</button>
-                      <button onClick={() => handleMove(index, 'down')} disabled={index === habits.length - 1} className="pt-1 text-xs leading-none text-slate-400 hover:text-slate-700 disabled:opacity-30">▼</button>
+                      <button onClick={() => handleMove(habit.id, 'up')} disabled={index === 0} className="pb-1 text-xs leading-none text-slate-400 hover:text-slate-700 disabled:opacity-30">▲</button>
+                      <button onClick={() => handleMove(habit.id, 'down')} disabled={index === filteredHabits.length - 1} className="pt-1 text-xs leading-none text-slate-400 hover:text-slate-700 disabled:opacity-30">▼</button>
                     </div>
                     <div>
                       <p className="font-semibold">{habit.title}</p>
@@ -174,7 +203,7 @@ export default function MyHabits() {
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold">Add habit</h3>
+          <h3 className="text-lg font-semibold">Add {tabLabel()}</h3>
           <form onSubmit={handleCreateHabit} className="mt-4 space-y-4">
             <label className="block text-sm font-medium text-slate-700">Title</label>
             <input
@@ -194,20 +223,7 @@ export default function MyHabits() {
               rows={3}
             />
 
-            <label className="block text-sm font-medium text-slate-700">Kind</label>
-            <select
-              value={kind}
-              onChange={(event) => setKind(event.target.value)}
-              className="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            >
-              {kinds.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-
-            {kind === 'task' || kind === 'goal' ? (
+            {activeTab === 'task' || activeTab === 'goal' ? (
               <>
                 <label className="block text-sm font-medium text-slate-700">Scheduled Date (Optional)</label>
                 <input
@@ -242,7 +258,7 @@ export default function MyHabits() {
               disabled={saving}
               className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? 'Saving…' : 'Create habit'}
+              {saving ? 'Saving…' : `Create ${tabLabel()}`}
             </button>
           </form>
         </div>
