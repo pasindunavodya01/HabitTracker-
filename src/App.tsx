@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
 import ReminderScheduler from './components/ReminderScheduler'
 import Today from './pages/Today'
@@ -43,6 +44,10 @@ function AppContent() {
 
   const pageElement = useMemo(() => pages.find((item) => item.key === page)?.component ?? <Today />, [page])
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+  }
+
   if (loading) {
     return <div className="p-6 text-center text-gray-600">Loading session…</div>
   }
@@ -58,7 +63,15 @@ function AppContent() {
           </div>
           <div>
             {user ? (
+            <div className="flex items-center gap-3">
               <div className="inline-flex rounded-full border bg-white px-4 py-2 text-sm text-slate-700 break-all">{user.email}</div>
+              <button
+                onClick={handleSignOut}
+                className="whitespace-nowrap rounded border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              >
+                Sign out
+              </button>
+            </div>
             ) : (
               <button onClick={() => setShowAuth(true)} className="whitespace-nowrap rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
                 Sign in
