@@ -20,13 +20,13 @@ type PageKey = (typeof pages)[number]['key']
 
 function Nav({ activePage, onNavigate }: { activePage: PageKey; onNavigate: (page: PageKey) => void }) {
   return (
-    <nav className="p-4 bg-gray-100 border-b">
-      <div className="max-w-5xl mx-auto flex flex-wrap gap-3">
+    <nav className="bg-gray-100 border-b">
+      <div className="max-w-5xl mx-auto flex overflow-x-auto px-4 py-3 gap-2 sm:gap-3 hide-scrollbar">
         {pages.map((page) => (
           <button
             key={page.key}
             onClick={() => onNavigate(page.key)}
-            className={`rounded px-3 py-2 text-sm font-medium ${activePage === page.key ? 'bg-white text-slate-900 shadow' : 'text-gray-600 hover:text-slate-900'}`}
+            className={`shrink-0 whitespace-nowrap rounded px-3 py-2 text-sm font-medium transition-colors ${activePage === page.key ? 'bg-white text-slate-900 shadow-sm' : 'text-gray-600 hover:text-slate-900 hover:bg-gray-200'}`}
           >
             {page.label}
           </button>
@@ -58,9 +58,9 @@ function AppContent() {
           </div>
           <div>
             {user ? (
-              <div className="rounded-full border bg-white px-4 py-2 text-sm text-slate-700">{user.email}</div>
+              <div className="inline-flex rounded-full border bg-white px-4 py-2 text-sm text-slate-700 break-all">{user.email}</div>
             ) : (
-              <button onClick={() => setShowAuth(true)} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+              <button onClick={() => setShowAuth(true)} className="whitespace-nowrap rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
                 Sign in
               </button>
             )}

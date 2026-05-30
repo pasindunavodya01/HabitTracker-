@@ -150,7 +150,7 @@ export default function Today() {
 
     return (
       <div key={habit.id} className={`rounded-3xl border p-5 shadow-sm transition-colors ${isCompleted ? 'border-emerald-100 bg-emerald-50/50' : 'border-slate-200 bg-white'}`}>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className={`text-lg font-semibold ${isCompleted ? 'text-slate-500 line-through' : 'text-slate-900'}`}>{habit.title}</p>
             {habit.description ? <p className="mt-1 text-sm text-gray-500">{habit.description}</p> : null}
@@ -159,7 +159,7 @@ export default function Today() {
           <button
             onClick={() => handleComplete(habit.id)}
             disabled={isCompleted || saving}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-600 text-white hover:bg-blue-700'} ${saving ? 'opacity-70' : ''}`}
+            className={`inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition-colors md:w-auto ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-600 text-white hover:bg-blue-700'} ${saving ? 'opacity-70' : ''}`}
           >
             {isCompleted ? doneText : saving ? 'Saving...' : buttonText}
           </button>
@@ -176,7 +176,7 @@ export default function Today() {
             <h2 className="text-xl font-semibold">Today</h2>
             <p className="mt-2 text-gray-600">Daily checklist, quick logging, and streak tracking.</p>
           </div>
-          <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm">{summaryText}</div>
+          <div className="inline-flex rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm self-start md:self-auto">{summaryText}</div>
         </div>
       </div>
 

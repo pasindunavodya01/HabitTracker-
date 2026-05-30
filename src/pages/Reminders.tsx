@@ -123,7 +123,7 @@ export default function Reminders() {
             <h2 className="text-xl font-semibold">Reminders</h2>
             <p className="mt-2 text-gray-600">Schedule habit reminders and receive browser notifications while LifeOS is open.</p>
           </div>
-          <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm">{nextReminderCount} active reminder(s)</div>
+          <div className="inline-flex rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm self-start md:self-auto">{nextReminderCount} active reminder(s)</div>
         </div>
       </div>
 

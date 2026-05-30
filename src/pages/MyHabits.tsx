@@ -145,7 +145,7 @@ export default function MyHabits() {
         </div>
       </div>
 
-      <div className="flex space-x-4 border-b border-slate-200">
+      <div className="flex overflow-x-auto space-x-4 border-b border-slate-200 hide-scrollbar">
         {[
           { id: 'habit', label: 'Habits' },
           { id: 'bad_habit', label: 'Avoid Habits' },
@@ -155,7 +155,7 @@ export default function MyHabits() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`py-2 px-4 border-b-2 font-semibold transition-colors ${activeTab === tab.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            className={`whitespace-nowrap py-2 px-4 border-b-2 font-semibold transition-colors ${activeTab === tab.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
           >
             {tab.label}
           </button>
