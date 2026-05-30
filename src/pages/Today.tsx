@@ -88,22 +88,42 @@ export default function Today() {
   const totalCount = habits.length
 
   const handleComplete = async (habitId: string) => {
-    if (!user || completedHabitIds.has(habitId)) return
+    if (!user) return
     setSavingHabitIds((current) => new Set(current).add(habitId))
 
     const habit = habits.find((h) => h.id === habitId)
+    const isCompleted = completedHabitIds.has(habitId)
 
-    const { error } = await supabase.from('completions').insert([
-      {
-        user_id: user.id,
-        habit_id: habitId,
-        completed_at: new Date().toISOString(),
-      },
-    ])
+    let error
 
-    // Auto-archive one-off tasks upon completion so they act like a to-do list
-    if (!error && habit?.kind === 'task') {
-      await supabase.from('habits').update({ is_archived: true }).eq('id', habitId)
+    if (isCompleted) {
+      const { start, end } = todayRange()
+      const { error: deleteError } = await supabase
+        .from('completions')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('habit_id', habitId)
+        .gte('completed_at', start)
+        .lt('completed_at', end)
+      
+      error = deleteError
+
+      if (!error && habit?.kind === 'task') {
+        await supabase.from('habits').update({ is_archived: false }).eq('id', habitId)
+      }
+    } else {
+      const { error: insertError } = await supabase.from('completions').insert([
+        {
+          user_id: user.id,
+          habit_id: habitId,
+          completed_at: new Date().toISOString(),
+        },
+      ])
+      error = insertError
+
+      if (!error && habit?.kind === 'task') {
+        await supabase.from('habits').update({ is_archived: true }).eq('id', habitId)
+      }
     }
 
     setSavingHabitIds((current) => {
@@ -113,7 +133,15 @@ export default function Today() {
     })
 
     if (!error) {
-      setCompletedHabitIds((current) => new Set(current).add(habitId))
+      if (isCompleted) {
+        setCompletedHabitIds((current) => {
+          const next = new Set(current)
+          next.delete(habitId)
+          return next
+        })
+      } else {
+        setCompletedHabitIds((current) => new Set(current).add(habitId))
+      }
     }
   }
 
@@ -177,10 +205,20 @@ export default function Today() {
           </div>
           <button
             onClick={() => handleComplete(habit.id)}
-            disabled={isCompleted || saving}
-            className={`inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition-colors md:w-auto ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-600 text-white hover:bg-blue-700'} ${saving ? 'opacity-70' : ''}`}
+            disabled={saving}
+            title={isCompleted ? "Click to undo" : ""}
+            className={`group inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition-colors md:w-auto ${isCompleted ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 hover:text-emerald-800' : 'bg-blue-600 text-white hover:bg-blue-700'} ${saving ? 'opacity-70 cursor-wait' : ''}`}
           >
-            {isCompleted ? doneText : saving ? 'Saving...' : buttonText}
+            {saving ? (
+              'Saving...'
+            ) : isCompleted ? (
+              <>
+                <span className="group-hover:hidden">{doneText}</span>
+                <span className="hidden group-hover:inline">⟲ Undo</span>
+              </>
+            ) : (
+              buttonText
+            )}
           </button>
         </div>
       </div>
