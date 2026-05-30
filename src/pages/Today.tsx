@@ -8,6 +8,7 @@ type Habit = {
   description: string | null
   kind: string
   is_archived: boolean
+  metadata?: any
 }
 
 type Completion = {
@@ -41,19 +42,41 @@ export default function Today() {
       const [{ data: habitsData }, { data: completionData }] = await Promise.all([
         supabase
           .from('habits')
-          .select('id, title, description, kind, is_archived')
-          .eq('user_id', user.id)
-          .eq('is_archived', false)
-          .order('created_at', { ascending: true }),
+          .select('id, title, description, kind, is_archived, metadata')
+          .eq('user_id', user?.id)
+          .eq('is_archived', false),
         supabase
           .from('completions')
           .select('habit_id')
-          .eq('user_id', user.id)
+          .eq('user_id', user?.id)
           .gte('completed_at', start)
           .lt('completed_at', end),
       ])
 
-      setHabits(habitsData ?? [])
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      const todayLocalStr = `${year}-${month}-${day}`
+      const todayDayOfWeek = now.getDay()
+
+      const filteredHabits = (habitsData ?? [])
+        .filter((h) => {
+          if (h.kind === 'task' || h.kind === 'goal') {
+            if (h.metadata?.target_date && h.metadata.target_date !== todayLocalStr) {
+              return false
+            }
+          } else {
+            const days = h.metadata?.days_of_week
+            if (Array.isArray(days) && !days.includes(todayDayOfWeek)) {
+              return false
+            }
+          }
+          return true
+        })
+        .sort((a, b) => (a.metadata?.order_index ?? 999) - (b.metadata?.order_index ?? 999))
+
+      setHabits(filteredHabits)
       setCompletedHabitIds(new Set((completionData ?? []).map((item) => item.habit_id)))
       setLoading(false)
     }
@@ -68,6 +91,8 @@ export default function Today() {
     if (!user || completedHabitIds.has(habitId)) return
     setSavingHabitIds((current) => new Set(current).add(habitId))
 
+    const habit = habits.find((h) => h.id === habitId)
+
     const { error } = await supabase.from('completions').insert([
       {
         user_id: user.id,
@@ -75,6 +100,11 @@ export default function Today() {
         completed_at: new Date().toISOString(),
       },
     ])
+
+    // Auto-archive one-off tasks and goals upon completion so they act like a to-do list
+    if (!error && (habit?.kind === 'task' || habit?.kind === 'goal')) {
+      await supabase.from('habits').update({ is_archived: true }).eq('id', habitId)
+    }
 
     setSavingHabitIds((current) => {
       const next = new Set(current)
@@ -98,6 +128,32 @@ export default function Today() {
     ? 'Great work! You completed every item on today’s checklist.'
     : `Nice progress — you’ve completed ${completedCount} of ${totalCount} habits today.`
 
+  const dailyHabits = habits.filter((h) => h.kind !== 'task' && h.kind !== 'goal')
+  const dailyTasks = habits.filter((h) => h.kind === 'task' || h.kind === 'goal')
+
+  const renderCard = (habit: Habit) => {
+    const isCompleted = completedHabitIds.has(habit.id)
+    const saving = savingHabitIds.has(habit.id)
+    return (
+      <div key={habit.id} className={`rounded-3xl border p-5 shadow-sm transition-colors ${isCompleted ? 'border-emerald-100 bg-emerald-50/50' : 'border-slate-200 bg-white'}`}>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className={`text-lg font-semibold ${isCompleted ? 'text-slate-500 line-through' : 'text-slate-900'}`}>{habit.title}</p>
+            {habit.description ? <p className="mt-1 text-sm text-gray-500">{habit.description}</p> : null}
+            <p className="mt-2 text-xs uppercase tracking-wide text-slate-500">{habit.kind.replace('_', ' ')}</p>
+          </div>
+          <button
+            onClick={() => handleComplete(habit.id)}
+            disabled={isCompleted || saving}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-600 text-white hover:bg-blue-700'} ${saving ? 'opacity-70' : ''}`}
+          >
+            {isCompleted ? '✓ Done' : saving ? 'Saving...' : (habit.kind === 'task' || habit.kind === 'goal') ? 'Tick off' : 'Complete'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <section className="space-y-6">
       <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
@@ -118,29 +174,20 @@ export default function Today() {
         </div>
       ) : (
         <>
-          <div className="space-y-4">
-            {habits.map((habit) => {
-              const isCompleted = completedHabitIds.has(habit.id)
-              const saving = savingHabitIds.has(habit.id)
-              return (
-                <div key={habit.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="text-lg font-semibold">{habit.title}</p>
-                      {habit.description ? <p className="mt-1 text-sm text-gray-500">{habit.description}</p> : null}
-                      <p className="mt-2 text-xs uppercase tracking-wide text-slate-500">{habit.kind.replace('_', ' ')}</p>
-                    </div>
-                    <button
-                      onClick={() => handleComplete(habit.id)}
-                      disabled={isCompleted || saving}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-600 text-white hover:bg-blue-700'} ${saving ? 'opacity-70' : ''}`}
-                    >
-                      {isCompleted ? 'Completed' : saving ? 'Saving...' : 'Complete'}
-                    </button>
-                  </div>
+            <div className="space-y-8">
+              {dailyHabits.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-slate-700">Habits & Routines</h3>
+                  {dailyHabits.map(renderCard)}
                 </div>
-              )
-            })}
+              )}
+
+              {dailyTasks.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-slate-700">Today's Tasks & Goals</h3>
+                  {dailyTasks.map(renderCard)}
+                </div>
+              )}
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
