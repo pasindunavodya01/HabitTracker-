@@ -34,6 +34,9 @@ export default function Progress() {
   const { current, longest } = useMemo(() => calculateStreaks(dailyCount), [dailyCount])
   const consistency = useMemo(() => calculateConsistency(dailyCount), [dailyCount])
   const totalCompleted = useMemo(() => dailyCount.reduce((sum, item) => sum + item.count, 0), [dailyCount])
+  const averageDaily = useMemo(() => dailyCount.length > 0 ? (totalCompleted / dailyCount.length).toFixed(1) : '0.0', [dailyCount, totalCompleted])
+  const peakDay = useMemo(() => dailyCount.length > 0 ? Math.max(...dailyCount.map((d) => d.count)) : 0, [dailyCount])
+  const zeroDays = useMemo(() => dailyCount.filter((d) => d.count === 0).length, [dailyCount])
 
   if (!user) {
     return (
@@ -128,6 +131,26 @@ export default function Progress() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+          </div>
+        </div>
+      )}
+
+      {!loading && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+            <p className="text-sm uppercase tracking-wide text-slate-500">Daily Average</p>
+            <p className="mt-3 text-2xl font-semibold text-slate-900">{averageDaily}</p>
+            <p className="mt-1 text-sm text-gray-500">Actions per day</p>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+            <p className="text-sm uppercase tracking-wide text-slate-500">Peak Output</p>
+            <p className="mt-3 text-2xl font-semibold text-slate-900">{peakDay}</p>
+            <p className="mt-1 text-sm text-gray-500">Most actions in one day</p>
+          </div>
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+            <p className="text-sm uppercase tracking-wide text-slate-500">Rest Days</p>
+            <p className="mt-3 text-2xl font-semibold text-slate-900">{zeroDays}</p>
+            <p className="mt-1 text-sm text-gray-500">Days with no activity</p>
           </div>
         </div>
       )}
