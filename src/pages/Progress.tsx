@@ -13,6 +13,8 @@ export default function Progress() {
     if (!user) return
 
     async function loadProgress() {
+      const userId = user?.id
+      if (!userId) return
       setLoading(true)
       const days = timeRange === 'weekly' ? 7 : timeRange === 'monthly' ? 30 : 90
       const dates = getDateRange(days)
@@ -21,7 +23,7 @@ export default function Progress() {
       const endDate = new Date(dates[dates.length - 1])
       endDate.setDate(endDate.getDate() + 1)
 
-      const completions = await getCompletions(user.id, startDate.toISOString(), endDate.toISOString())
+      const completions = await getCompletions(userId, startDate.toISOString(), endDate.toISOString())
       setDailyCount(buildDailySeries(completions, days))
       setLoading(false)
     }
