@@ -21,6 +21,7 @@ export default function MyHabits() {
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([0, 1, 2, 3, 4, 5, 6])
   const [targetDate, setTargetDate] = useState('')
   const [activeTab, setActiveTab] = useState('habit')
+  const [showArchived, setShowArchived] = useState(false)
 
   const DAYS = [
     { label: 'S', value: 0 },
@@ -41,14 +42,14 @@ export default function MyHabits() {
         .from('habits')
         .select('id, title, description, kind, is_archived, metadata')
         .eq('user_id', user?.id)
-        .eq('is_archived', false)
+        .eq('is_archived', showArchived)
       const sorted = (data ?? []).sort((a, b) => (a.metadata?.order_index ?? 999) - (b.metadata?.order_index ?? 999))
       setHabits(sorted)
       setLoading(false)
     }
 
     loadHabits()
-  }, [user])
+  }, [user, showArchived])
 
   const handleCreateHabit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -76,6 +77,7 @@ export default function MyHabits() {
       setDescription('')
       setDaysOfWeek([0, 1, 2, 3, 4, 5, 6])
       setTargetDate('')
+      setShowArchived(false)
       const { data } = await supabase
         .from('habits')
         .select('id, title, description, kind, is_archived, metadata')
@@ -86,9 +88,9 @@ export default function MyHabits() {
     }
   }
 
-  const toggleArchive = async (habitId: string) => {
+  const toggleArchive = async (habitId: string, currentStatus: boolean) => {
     if (!user) return
-    await supabase.from('habits').update({ is_archived: true }).eq('id', habitId)
+    await supabase.from('habits').update({ is_archived: !currentStatus }).eq('id', habitId)
     setHabits((current) => current.filter((habit) => habit.id !== habitId))
   }
 
@@ -164,7 +166,13 @@ export default function MyHabits() {
 
       <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold">Your {tabLabel()}s</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">{showArchived ? 'Archived' : 'Your'} {tabLabel()}s</h3>
+            <label className="flex items-center space-x-2 text-sm text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500" />
+              <span>View archived</span>
+            </label>
+          </div>
           {loading ? (
             <p className="mt-4 text-gray-500">Loading {tabLabel().toLowerCase()}s…</p>
           ) : filteredHabits.length === 0 ? (
@@ -189,10 +197,10 @@ export default function MyHabits() {
                     </div>
                   </div>
                     <button
-                      onClick={() => toggleArchive(habit.id)}
+                      onClick={() => toggleArchive(habit.id, habit.is_archived)}
                       className="rounded-full border px-3 py-1 text-sm text-gray-600 hover:bg-slate-100"
                     >
-                      Archive
+                      {habit.is_archived ? 'Unarchive' : 'Archive'}
                     </button>
                   </div>
                   {habit.description ? <p className="mt-3 text-sm text-gray-500">{habit.description}</p> : null}
