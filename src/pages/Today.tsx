@@ -62,11 +62,11 @@ export default function Today() {
 
       const filteredHabits = (habitsData ?? [])
         .filter((h) => {
-          if (h.kind === 'task' || h.kind === 'goal') {
+          if (h.kind === 'task') {
             if (h.metadata?.target_date && h.metadata.target_date !== todayLocalStr) {
               return false
             }
-          } else {
+          } else if (h.kind !== 'goal') {
             const days = h.metadata?.days_of_week
             if (Array.isArray(days) && !days.includes(todayDayOfWeek)) {
               return false
@@ -101,8 +101,8 @@ export default function Today() {
       },
     ])
 
-    // Auto-archive one-off tasks and goals upon completion so they act like a to-do list
-    if (!error && (habit?.kind === 'task' || habit?.kind === 'goal')) {
+    // Auto-archive one-off tasks upon completion so they act like a to-do list
+    if (!error && habit?.kind === 'task') {
       await supabase.from('habits').update({ is_archived: true }).eq('id', habitId)
     }
 
@@ -139,10 +139,29 @@ export default function Today() {
 
     let buttonText = 'Complete'
     let doneText = '✓ Done'
+    let metaText = habit.kind.replace('_', ' ')
+
     if (habit.kind === 'task') {
       buttonText = 'Complete Task'
     } else if (habit.kind === 'goal') {
       buttonText = 'Update Progress'
+      doneText = '✓ Updated'
+
+      if (habit.metadata?.target_date) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const target = new Date(habit.metadata.target_date)
+        const diffTime = target.getTime() - today.getTime()
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        
+        if (diffDays > 0) {
+          metaText += ` • ${diffDays} days remaining`
+        } else if (diffDays === 0) {
+          metaText += ` • Due today`
+        } else {
+          metaText += ` • Overdue`
+        }
+      }
     } else if (habit.kind === 'bad_habit') {
       buttonText = 'Stayed Clean'
       doneText = '✓ Stayed Clean'
@@ -154,7 +173,7 @@ export default function Today() {
           <div>
             <p className={`text-lg font-semibold ${isCompleted ? 'text-slate-500 line-through' : 'text-slate-900'}`}>{habit.title}</p>
             {habit.description ? <p className="mt-1 text-sm text-gray-500">{habit.description}</p> : null}
-            <p className="mt-2 text-xs uppercase tracking-wide text-slate-500">{habit.kind.replace('_', ' ')}</p>
+            <p className="mt-2 text-xs uppercase tracking-wide text-slate-500">{metaText}</p>
           </div>
           <button
             onClick={() => handleComplete(habit.id)}
