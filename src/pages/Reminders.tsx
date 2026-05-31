@@ -17,8 +17,11 @@ type Reminder = {
   habit_title?: string
 }
 
-function formatSchedule(schedule: string) {
-  return schedule
+function formatTime(time: string) {
+  const [h, m] = time.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  const hour = h % 12 === 0 ? 12 : h % 12
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`
 }
 
 function isNotificationSupported() {
@@ -36,10 +39,10 @@ export default function Reminders() {
   const [permission, setPermission] = useState(
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
   )
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
-
     async function load() {
       const userId = user?.id
       if (!userId) return
@@ -48,46 +51,36 @@ export default function Reminders() {
         supabase.from('habits').select('id, title').eq('user_id', userId).eq('is_archived', false),
         supabase.from('reminders').select('id, habit_id, schedule, timezone, enabled, created_at').eq('user_id', userId).order('created_at', { ascending: false }),
       ])
-
       const habitsWithData = habitData ?? []
       setHabits(habitsWithData)
       setHabitId(habitsWithData[0]?.id ?? '')
-
-      const remindersWithTitles = (reminderData ?? []).map((reminder) => ({
-        ...reminder,
-        habit_title: habitsWithData.find((habit) => habit.id === reminder.habit_id)?.title ?? 'Habit',
-      }))
-      setReminders(remindersWithTitles)
+      setReminders(
+        (reminderData ?? []).map((r) => ({
+          ...r,
+          habit_title: habitsWithData.find((h) => h.id === r.habit_id)?.title ?? 'Habit',
+        }))
+      )
       setLoading(false)
     }
-
     load()
   }, [user])
 
-  const nextReminderCount = useMemo(() => reminders.filter((item) => item.enabled).length, [reminders])
+  const activeCount = useMemo(() => reminders.filter((r) => r.enabled).length, [reminders])
 
   const handleCreateReminder = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!user || !habitId || !schedule) return
-
     setSaving(true)
     const { error } = await supabase.from('reminders').insert([
-      {
-        user_id: user.id,
-        habit_id: habitId,
-        schedule,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        enabled: true,
-      },
+      { user_id: user.id, habit_id: habitId, schedule, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, enabled: true },
     ])
-
     setSaving(false)
     if (!error) {
       setSchedule('08:00')
-      const habit = habits.find((item) => item.id === habitId)
-      setReminders((current) => [
+      const habit = habits.find((h) => h.id === habitId)
+      setReminders((c) => [
         { id: crypto.randomUUID(), habit_id: habitId, schedule, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, enabled: true, created_at: new Date().toISOString(), habit_title: habit?.title ?? 'Habit' },
-        ...current,
+        ...c,
       ])
     }
   }
@@ -95,8 +88,15 @@ export default function Reminders() {
   const toggleReminder = async (id: string, enabled: boolean) => {
     if (!user) return
     const { error } = await supabase.from('reminders').update({ enabled }).eq('id', id)
+    if (!error) setReminders((c) => c.map((r) => (r.id === id ? { ...r, enabled } : r)))
+  }
+
+  const deleteReminder = async (id: string) => {
+    if (!user) return
+    const { error } = await supabase.from('reminders').delete().eq('id', id)
     if (!error) {
-      setReminders((current) => current.map((reminder) => (reminder.id === id ? { ...reminder, enabled } : reminder)))
+      setReminders((c) => c.filter((r) => r.id !== id))
+      setDeletingId(null)
     }
   }
 
@@ -108,69 +108,137 @@ export default function Reminders() {
 
   if (!user) {
     return (
-      <section>
-        <h2 className="text-xl font-semibold">Reminders</h2>
-        <p className="mt-2 text-gray-600">Sign in to set up habit reminders and schedule daily check-ins.</p>
+      <section className="space-y-6 max-w-3xl mx-auto">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-bold text-slate-900">Reminders</h2>
+          <p className="mt-1 text-sm text-slate-400">Sign in to set up habit reminders and schedule daily check-ins.</p>
+        </div>
       </section>
     )
   }
 
+  const notifStatus = !isNotificationSupported()
+    ? { icon: '🚫', text: 'Notifications not supported by this browser.', type: 'neutral' }
+    : permission === 'granted'
+    ? { icon: '🔔', text: 'Browser notifications are enabled.', type: 'success' }
+    : permission === 'denied'
+    ? { icon: '⛔', text: 'Notifications are blocked in your browser settings.', type: 'error' }
+    : { icon: '🔕', text: 'Grant permission to receive reminders while the app is open.', type: 'warning' }
+
+  const notifColors: Record<string, string> = {
+    success: 'border-emerald-100 bg-emerald-50',
+    error:   'border-red-100 bg-red-50',
+    warning: 'border-amber-100 bg-amber-50',
+    neutral: 'border-slate-200 bg-slate-50',
+  }
+
   return (
-    <section className="space-y-6">
-      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold">Reminders</h2>
-            <p className="mt-2 text-gray-600">Schedule habit reminders and receive browser notifications while LifeOS is open.</p>
-          </div>
-          <div className="inline-flex rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm self-start md:self-auto">{nextReminderCount} active reminder(s)</div>
+    <section className="space-y-6 max-w-3xl mx-auto">
+      {/* Header */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Reminders</h2>
+          <p className="mt-1 text-sm text-slate-400">Schedule daily habit alerts delivered right to your browser.</p>
+        </div>
+        <div className="flex-shrink-0 rounded-xl bg-blue-50 px-3 py-1.5 text-sm font-bold text-blue-600">
+          {activeCount} active
         </div>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-wide text-slate-500">Browser notifications</p>
-            <p className="mt-2 text-sm text-slate-700">
-              {isNotificationSupported()
-                ? permission === 'granted'
-                  ? 'Notifications are enabled.'
-                  : permission === 'denied'
-                  ? 'Notifications are blocked in your browser settings.'
-                  : 'Grant permission to receive reminder notifications while LifeOS is open.'
-                : 'Notifications are not supported by this browser.'}
-            </p>
-          </div>
-          {isNotificationSupported() && permission !== 'granted' ? (
-            <button onClick={requestPermission} className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-              Enable notifications
-            </button>
-          ) : null}
+      {/* Notification permission banner */}
+      <div className={`rounded-2xl border p-4 flex items-center justify-between gap-4 ${notifColors[notifStatus.type]}`}>
+        <div className="flex items-center gap-3">
+          <span className="text-xl">{notifStatus.icon}</span>
+          <p className="text-sm font-medium text-slate-700">{notifStatus.text}</p>
         </div>
+        {isNotificationSupported() && permission === 'default' && (
+          <button
+            onClick={requestPermission}
+            className="flex-shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 transition-colors"
+          >
+            Enable
+          </button>
+        )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold">My reminder schedule</h3>
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+        {/* Reminder list */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="font-bold text-slate-800 mb-1">Your Schedule</h3>
+          <p className="text-xs text-slate-400 mb-5">Toggle reminders on/off or remove them anytime.</p>
+
           {loading ? (
-            <p className="mt-4 text-gray-500">Loading reminders…</p>
+            <div className="flex items-center gap-3 py-8 justify-center text-slate-400">
+              <div className="w-5 h-5 border-2 border-slate-300 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm">Loading…</span>
+            </div>
           ) : reminders.length === 0 ? (
-            <p className="mt-4 text-gray-500">No reminders yet. Use the form to schedule habit alerts.</p>
+            <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center">
+              <p className="text-2xl mb-2">⏰</p>
+              <p className="text-sm font-medium text-slate-500">No reminders set</p>
+              <p className="text-xs text-slate-400 mt-1">Use the form to schedule your first alert.</p>
+            </div>
           ) : (
-            <div className="mt-4 space-y-3">
+            <div className="space-y-2">
               {reminders.map((reminder) => (
-                <div key={reminder.id} className="rounded-3xl border border-slate-200 p-4">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="font-semibold">{reminder.habit_title}</p>
-                      <p className="text-sm text-slate-500">{formatSchedule(reminder.schedule)} daily</p>
-                    </div>
+                <div
+                  key={reminder.id}
+                  className={`rounded-xl border p-4 flex items-center gap-4 transition-colors ${
+                    reminder.enabled ? 'border-blue-100 bg-blue-50/40' : 'border-slate-200 bg-slate-50/60'
+                  }`}
+                >
+                  {/* Time badge */}
+                  <div
+                    className={`flex-shrink-0 rounded-xl px-3 py-2 text-center ${
+                      reminder.enabled ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'
+                    }`}
+                  >
+                    <p className="text-sm font-bold leading-none">{formatTime(reminder.schedule)}</p>
+                    <p className="text-[10px] mt-0.5 opacity-70">daily</p>
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-semibold text-sm truncate ${reminder.enabled ? 'text-slate-800' : 'text-slate-400'}`}>
+                      {reminder.habit_title}
+                    </p>
+                    {reminder.timezone && (
+                      <p className="text-xs text-slate-400 truncate">{reminder.timezone}</p>
+                    )}
+                  </div>
+
+                  {/* Controls */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Toggle */}
                     <button
                       onClick={() => toggleReminder(reminder.id, !reminder.enabled)}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold ${reminder.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                      title={reminder.enabled ? 'Disable' : 'Enable'}
+                      className={`relative w-9 h-5 rounded-full transition-colors ${reminder.enabled ? 'bg-blue-500' : 'bg-slate-200'}`}
                     >
-                      {reminder.enabled ? 'Enabled' : 'Disabled'}
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${reminder.enabled ? 'translate-x-4' : ''}`}
+                      />
                     </button>
+
+                    {/* Delete */}
+                    {deletingId === reminder.id ? (
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => deleteReminder(reminder.id)} className="rounded-lg bg-red-50 border border-red-200 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-100">
+                          Remove
+                        </button>
+                        <button onClick={() => setDeletingId(null)} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-200">
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeletingId(reminder.id)}
+                        className="text-slate-300 hover:text-red-400 transition-colors text-sm px-1"
+                        title="Delete"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -178,44 +246,50 @@ export default function Reminders() {
           )}
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
-          <h3 className="text-lg font-semibold">Add a reminder</h3>
-          <form onSubmit={handleCreateReminder} className="mt-4 space-y-4">
-            <label className="block text-sm font-medium text-slate-700">Habit</label>
-            <select
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              value={habitId}
-              onChange={(event) => setHabitId(event.target.value)}
-              required
-              disabled={habits.length === 0}
-            >
-              {habits.length === 0 ? (
-                <option value="">Add a habit first</option>
-              ) : (
-                habits.map((habit) => (
-                  <option key={habit.id} value={habit.id}>
-                    {habit.title}
-                  </option>
-                ))
-              )}
-            </select>
+        {/* Add form */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm h-fit">
+          <h3 className="font-bold text-slate-800 mb-4">⏰ Add Reminder</h3>
+          <form onSubmit={handleCreateReminder} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">Habit</label>
+              <select
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                value={habitId}
+                onChange={(e) => setHabitId(e.target.value)}
+                required
+                disabled={habits.length === 0}
+              >
+                {habits.length === 0 ? (
+                  <option value="">Add a habit first</option>
+                ) : (
+                  habits.map((h) => (
+                    <option key={h.id} value={h.id}>{h.title}</option>
+                  ))
+                )}
+              </select>
+            </div>
 
-            <label className="block text-sm font-medium text-slate-700">Time</label>
-            <input
-              type="time"
-              value={schedule}
-              onChange={(event) => setSchedule(event.target.value)}
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              required
-              disabled={habits.length === 0}
-            />
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">Time</label>
+              <input
+                type="time"
+                value={schedule}
+                onChange={(e) => setSchedule(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                required
+                disabled={habits.length === 0}
+              />
+              {schedule && (
+                <p className="mt-1 text-xs text-slate-400">Fires daily at {formatTime(schedule)}</p>
+              )}
+            </div>
 
             <button
               type="submit"
-              disabled={saving}
-              className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={saving || habits.length === 0}
+              className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Saving…' : 'Save reminder'}
+              {saving ? 'Saving…' : 'Save Reminder'}
             </button>
           </form>
         </div>
