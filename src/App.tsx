@@ -39,7 +39,6 @@ function Nav({ activePage, onNavigate }: { activePage: PageKey; onNavigate: (pag
 
 function AppContent() {
   const { user, loading } = useAuth()
-  const [showAuth, setShowAuth] = useState(false)
   const [page, setPage] = useState<PageKey>('today')
 
   const pageElement = useMemo(() => pages.find((item) => item.key === page)?.component ?? <Today />, [page])
@@ -52,6 +51,22 @@ function AppContent() {
     return <div className="p-6 text-center text-gray-600">Loading session…</div>
   }
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6 text-slate-900">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold">LifeOS</h1>
+            <p className="mt-2 text-gray-600">A simple daily growth workflow for habits, routines, and progress.</p>
+          </div>
+          <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
+            <Auth />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <Nav activePage={page} onNavigate={setPage} />
@@ -62,7 +77,6 @@ function AppContent() {
             <p className="mt-2 text-gray-600">A simple daily growth workflow for habits, routines, and progress.</p>
           </div>
           <div>
-            {user ? (
             <div className="flex items-center gap-3">
               <div className="inline-flex rounded-full border bg-white px-4 py-2 text-sm text-slate-700 break-all">{user.email}</div>
               <button
@@ -72,30 +86,10 @@ function AppContent() {
                 Sign out
               </button>
             </div>
-            ) : (
-              <button onClick={() => setShowAuth(true)} className="whitespace-nowrap rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                Sign in
-              </button>
-            )}
           </div>
         </div>
 
-        {!user && (
-          <div className="mt-8 rounded-3xl border border-dashed border-slate-300 bg-white/80 p-6 text-center shadow-sm">
-            <p className="text-lg font-medium">Sign in to access your personal LifeOS dashboard.</p>
-            <button onClick={() => setShowAuth(true)} className="mt-4 rounded bg-blue-600 px-4 py-2 text-white shadow-sm hover:bg-blue-700">
-              Sign in with email
-            </button>
-          </div>
-        )}
-
-        {showAuth && (
-          <div className="mt-6 max-w-md rounded-3xl bg-white p-6 shadow-sm">
-            <Auth onClose={() => setShowAuth(false)} />
-          </div>
-        )}
-
-        {user && <div className="mt-8">{pageElement}</div>}
+        <div className="mt-8">{pageElement}</div>
       </main>
       <ReminderScheduler />
     </div>

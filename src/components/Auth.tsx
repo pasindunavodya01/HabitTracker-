@@ -4,7 +4,7 @@ import type { Session } from '@supabase/supabase-js'
 
 type AuthMode = 'login' | 'register' | 'forgot'
 
-export default function Auth({ onClose }: { onClose?: () => void }) {
+export default function Auth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -85,8 +85,6 @@ export default function Auth({ onClose }: { onClose?: () => void }) {
 
         if (!authResult.data?.session) {
           setStatusMessage(isRegister ? 'Check your email to confirm your new account.' : 'Signed in successfully.')
-        } else {
-          onClose && onClose()
         }
       }
 
