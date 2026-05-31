@@ -32,6 +32,8 @@ export default function MyHabits() {
   const [activeTab, setActiveTab] = useState('habit')
   const [showArchived, setShowArchived] = useState(false)
   const [confirmArchive, setConfirmArchive] = useState<string | null>(null)
+  const [milestones, setMilestones] = useState<{ id: string; title: string; done: boolean }[]>([])
+  const [newMilestone, setNewMilestone] = useState('')
 
   const activeTabMeta = TABS.find((t) => t.id === activeTab) ?? TABS[0]
 
@@ -60,6 +62,7 @@ export default function MyHabits() {
       ...(activeTab === 'task' || activeTab === 'goal'
         ? { target_date: targetDate || null }
         : { days_of_week: daysOfWeek }),
+      ...(activeTab === 'goal' && milestones.length > 0 ? { milestones } : {}),
     }
     const { error } = await supabase.from('habits').insert([
       { user_id: user.id, title: title.trim(), description: description.trim() || null, kind: activeTab, metadata },
@@ -71,6 +74,8 @@ export default function MyHabits() {
       setDaysOfWeek([0, 1, 2, 3, 4, 5, 6])
       setTargetDate('')
       setShowArchived(false)
+      setMilestones([])
+      setNewMilestone('')
       const { data } = await supabase
         .from('habits')
         .select('id, title, description, kind, is_archived, metadata')
@@ -86,6 +91,17 @@ export default function MyHabits() {
     await supabase.from('habits').update({ is_archived: !currentStatus }).eq('id', habitId)
     setHabits((c) => c.filter((h) => h.id !== habitId))
     setConfirmArchive(null)
+  }
+
+  const toggleMilestone = async (habitId: string, milestoneId: string) => {
+    const habit = habits.find((h) => h.id === habitId)
+    if (!habit) return
+    const newMilestones = habit.metadata?.milestones?.map((m: any) =>
+      m.id === milestoneId ? { ...m, done: !m.done } : m
+    )
+    const newMeta = { ...habit.metadata, milestones: newMilestones }
+    setHabits((c) => c.map((h) => (h.id === habitId ? { ...h, metadata: newMeta } : h)))
+    await supabase.from('habits').update({ metadata: newMeta }).eq('id', habitId)
   }
 
   const filteredHabits = habits.filter((h) => {
@@ -230,8 +246,29 @@ export default function MyHabits() {
                             </div>
                           )}
                         </div>
+                        
+                        {/* Milestones rendering */}
+                        {habit.kind === 'goal' && habit.metadata?.milestones?.length > 0 && (
+                          <div className="mt-3 space-y-1.5 border-t border-slate-200/60 pt-3">
+                            <p className="text-xs font-semibold text-slate-500 mb-2">Milestones:</p>
+                            {habit.metadata.milestones.map((m: any) => (
+                              <label key={m.id} className="flex items-center gap-2 cursor-pointer group w-fit">
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${m.done ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300 group-hover:border-slate-400'}`}>
+                                  {m.done && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                </div>
+                                <span className={`text-sm select-none ${m.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{m.title}</span>
+                                <input
+                                  type="checkbox"
+                                  className="hidden"
+                                  checked={m.done || false}
+                                  onChange={() => toggleMilestone(habit.id, m.id)}
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                        </div>
                       </div>
-                    </div>
 
                     {/* Archive button */}
                     {confirmArchive === habit.id ? (
@@ -293,15 +330,47 @@ export default function MyHabits() {
             </div>
 
             {activeTab === 'task' || activeTab === 'goal' ? (
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">Target Date <span className="font-normal normal-case text-slate-400">(optional)</span></label>
-                <input
-                  type="date"
-                  value={targetDate}
-                  onChange={(e) => setTargetDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
-                />
-              </div>
+              <>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">Target Date <span className="font-normal normal-case text-slate-400">(optional)</span></label>
+                  <input
+                    type="date"
+                    value={targetDate}
+                    onChange={(e) => setTargetDate(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                  />
+                </div>
+
+                {activeTab === 'goal' && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">Milestones</label>
+                    <div className="space-y-2 mb-2">
+                      {milestones.map(m => (
+                        <div key={m.id} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 text-sm">
+                          <span>{m.title}</span>
+                          <button type="button" onClick={() => setMilestones(ms => ms.filter(x => x.id !== m.id))} className="text-slate-400 hover:text-red-500">✕</button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        value={newMilestone}
+                        onChange={e => setNewMilestone(e.target.value)}
+                        placeholder="Add a milestone..."
+                        className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (newMilestone.trim()) { setMilestones(ms => [...ms, { id: crypto.randomUUID(), title: newMilestone.trim(), done: false }]); setNewMilestone(''); } } }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => { if (newMilestone.trim()) { setMilestones(ms => [...ms, { id: crypto.randomUUID(), title: newMilestone.trim(), done: false }]); setNewMilestone(''); } }}
+                        className="rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-300"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Repeat on</label>

@@ -31,7 +31,8 @@ const KIND_META: Record<string, { label: string; icon: string; accent: string; c
 export default function Today() {
   const { user } = useAuth()
   const [habits, setHabits] = useState<Habit[]>([])
-  const [completedHabitIds, setCompletedHabitIds] = useState<Set<string>>(new Set())
+  const [completedLogs, setCompletedLogs] = useState<Record<string, string | null>>({})
+  const [goalInputs, setGoalInputs] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [savingHabitIds, setSavingHabitIds] = useState<Set<string>>(new Set())
 
@@ -48,7 +49,7 @@ export default function Today() {
           .eq('is_archived', false),
         supabase
           .from('completions')
-          .select('habit_id')
+          .select('habit_id, note')
           .eq('user_id', user?.id)
           .gte('completed_at', start)
           .lt('completed_at', end),
@@ -74,21 +75,25 @@ export default function Today() {
         .sort((a, b) => (a.metadata?.order_index ?? 999) - (b.metadata?.order_index ?? 999))
 
       setHabits(filteredHabits)
-      setCompletedHabitIds(new Set((completionData ?? []).map((item) => item.habit_id)))
+      const logs: Record<string, string | null> = {}
+      ;(completionData ?? []).forEach((item) => {
+        logs[item.habit_id] = item.note
+      })
+      setCompletedLogs(logs)
       setLoading(false)
     }
     load()
   }, [user])
 
-  const completedCount = completedHabitIds.size
+  const completedCount = Object.keys(completedLogs).length
   const totalCount = habits.length
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
-  const handleComplete = async (habitId: string) => {
+  const handleComplete = async (habitId: string, note?: string) => {
     if (!user) return
     setSavingHabitIds((c) => new Set(c).add(habitId))
     const habit = habits.find((h) => h.id === habitId)
-    const isCompleted = completedHabitIds.has(habitId)
+    const isCompleted = habitId in completedLogs
     let error
     if (isCompleted) {
       const { start, end } = todayRange()
@@ -100,7 +105,7 @@ export default function Today() {
       }
     } else {
       const { error: insertError } = await supabase.from('completions').insert([
-        { user_id: user.id, habit_id: habitId, completed_at: new Date().toISOString() },
+        { user_id: user.id, habit_id: habitId, completed_at: new Date().toISOString(), note: note || null },
       ])
       error = insertError
       if (!error && habit?.kind === 'task') {
@@ -110,11 +115,23 @@ export default function Today() {
     setSavingHabitIds((c) => { const n = new Set(c); n.delete(habitId); return n })
     if (!error) {
       if (isCompleted) {
-        setCompletedHabitIds((c) => { const n = new Set(c); n.delete(habitId); return n })
+        setCompletedLogs((c) => { const n = { ...c }; delete n[habitId]; return n })
       } else {
-        setCompletedHabitIds((c) => new Set(c).add(habitId))
+        setCompletedLogs((c) => ({ ...c, [habitId]: note || null }))
+        setGoalInputs((c) => { const n = { ...c }; delete n[habitId]; return n })
       }
     }
+  }
+
+  const toggleMilestone = async (habitId: string, milestoneId: string) => {
+    const habit = habits.find((h) => h.id === habitId)
+    if (!habit) return
+    const newMilestones = habit.metadata?.milestones?.map((m: any) =>
+      m.id === milestoneId ? { ...m, done: !m.done } : m
+    )
+    const newMeta = { ...habit.metadata, milestones: newMilestones }
+    setHabits((c) => c.map((h) => (h.id === habitId ? { ...h, metadata: newMeta } : h)))
+    await supabase.from('habits').update({ metadata: newMeta }).eq('id', habitId)
   }
 
   const summaryText = useMemo(() => {
@@ -134,7 +151,7 @@ export default function Today() {
   ].filter((g) => g.items.length > 0)
 
   const renderCard = (habit: Habit) => {
-    const isCompleted = completedHabitIds.has(habit.id)
+    const isCompleted = habit.id in completedLogs
     const saving = savingHabitIds.has(habit.id)
     const meta = KIND_META[habit.kind] ?? KIND_META.habit
 
@@ -153,60 +170,113 @@ export default function Today() {
           transition: 'all 0.2s ease',
           borderLeft: `3px solid ${isCompleted ? '#d1fae5' : meta.accent}`,
         }}
-        className={`group relative rounded-2xl border p-4 flex items-center gap-4 ${
+        className={`group relative rounded-2xl border p-4 flex gap-4 ${
           isCompleted
             ? 'border-emerald-100 bg-emerald-50/40'
             : 'border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-sm'
-        }`}
+        } ${habit.kind === 'goal' ? 'flex-col' : 'items-center'}`}
       >
-        {/* Checkbox */}
-        <button
-          onClick={() => handleComplete(habit.id)}
-          disabled={saving}
-          aria-label={isCompleted ? 'Undo' : meta.completeLabel}
-          style={{ borderColor: isCompleted ? '#10b981' : meta.accent }}
-          className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-            isCompleted ? 'bg-emerald-500' : 'bg-white hover:bg-slate-50'
-          } ${saving ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
-        >
-          {saving ? (
-            <span className="block w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-          ) : isCompleted ? (
-            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          ) : null}
-        </button>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`font-semibold text-sm leading-snug ${isCompleted ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-              {habit.title}
-            </span>
-            <span
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-              style={{
-                backgroundColor: isCompleted ? '#f0fdf4' : `${meta.accent}18`,
-                color: isCompleted ? '#6ee7b7' : meta.accent,
-              }}
+        <div className="flex items-center gap-4 w-full">
+          {/* Checkbox for non-goals */}
+          {habit.kind !== 'goal' && (
+            <button
+              onClick={() => handleComplete(habit.id)}
+              disabled={saving}
+              aria-label={isCompleted ? 'Undo' : meta.completeLabel}
+              style={{ borderColor: isCompleted ? '#10b981' : meta.accent }}
+              className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                isCompleted ? 'bg-emerald-500' : 'bg-white hover:bg-slate-50'
+              } ${saving ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
             >
-              {meta.icon} {badgeText}
-            </span>
+              {saving ? (
+                <span className="block w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+              ) : isCompleted ? (
+                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : null}
+            </button>
+          )}
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`font-semibold text-sm leading-snug ${isCompleted && habit.kind !== 'goal' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                {habit.title}
+              </span>
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                style={{
+                  backgroundColor: isCompleted ? '#f0fdf4' : `${meta.accent}18`,
+                  color: isCompleted ? '#6ee7b7' : meta.accent,
+                }}
+              >
+                {meta.icon} {badgeText}
+              </span>
+            </div>
+            {habit.description && (
+              <p className="mt-0.5 text-xs text-slate-400 truncate">{habit.description}</p>
+            )}
           </div>
-          {habit.description && (
-            <p className="mt-0.5 text-xs text-slate-400 truncate">{habit.description}</p>
+
+          {/* Undo hint on hover when completed for non-goals */}
+          {isCompleted && !saving && habit.kind !== 'goal' && (
+            <button
+              onClick={() => handleComplete(habit.id)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-slate-400 hover:text-slate-600 flex-shrink-0"
+            >
+              ⟲ Undo
+            </button>
           )}
         </div>
 
-        {/* Undo hint on hover when completed */}
-        {isCompleted && !saving && (
-          <button
-            onClick={() => handleComplete(habit.id)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-slate-400 hover:text-slate-600 flex-shrink-0"
-          >
-            ⟲ Undo
-          </button>
+        {/* Goal specific features */}
+        {habit.kind === 'goal' && (
+          <div className="mt-1 w-full">
+            {/* Text Input Log for Goals */}
+            {!isCompleted ? (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Log today's progress (e.g. read 10 pages, ran 2 miles)..."
+                  value={goalInputs[habit.id] || ''}
+                  onChange={(e) => setGoalInputs((prev) => ({ ...prev, [habit.id]: e.target.value }))}
+                  disabled={saving}
+                  className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (goalInputs[habit.id]?.trim()) { handleComplete(habit.id, goalInputs[habit.id]); } } }}
+                />
+                <button onClick={() => handleComplete(habit.id, goalInputs[habit.id])} disabled={saving || !goalInputs[habit.id]?.trim()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap">
+                  {saving ? 'Saving...' : 'Log Progress'}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-start justify-between gap-4 rounded-xl bg-emerald-50/70 p-3 border border-emerald-100">
+                <div className="text-sm text-emerald-800"><span className="font-semibold mr-1">Today's update:</span><span className="italic">"{completedLogs[habit.id]}"</span></div>
+                <button onClick={() => handleComplete(habit.id)} disabled={saving} className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex-shrink-0 mt-0.5">Undo</button>
+              </div>
+            )}
+
+            {/* Milestones rendering */}
+            {habit.metadata?.milestones?.length > 0 && (
+              <div className="mt-3 space-y-1.5 border-t border-slate-200/60 pt-3">
+                <p className="text-xs font-semibold text-slate-500 mb-2">Milestones:</p>
+                {habit.metadata.milestones.map((m: any) => (
+                  <label key={m.id} className="flex items-center gap-2 cursor-pointer group w-fit">
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${m.done ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300 group-hover:border-slate-400'}`}>
+                      {m.done && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                    </div>
+                    <span className={`text-sm select-none ${m.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{m.title}</span>
+                    <input
+                      type="checkbox"
+                      className="hidden"
+                      checked={m.done || false}
+                      onChange={() => toggleMilestone(habit.id, m.id)}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
     )
