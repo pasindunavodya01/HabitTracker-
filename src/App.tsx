@@ -13,10 +13,11 @@ import Diary from './pages/Diary'
 const pages = [
   { key: 'today', label: 'Today', component: <Today /> },
   { key: 'habits', label: 'My Items', component: <MyHabits /> },
+   { key: 'diary', label: 'Diary', component: <Diary /> },
   { key: 'progress', label: 'Progress', component: <Progress /> },
   { key: 'analytics', label: 'Analytics', component: <Analytics /> },
   { key: 'reminders', label: 'Reminders', component: <Reminders /> },
-  { key: 'diary', label: 'Diary', component: <Diary /> },
+ 
 ] as const
 
 type PageKey = (typeof pages)[number]['key']
