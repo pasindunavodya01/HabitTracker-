@@ -8,6 +8,7 @@ import MyHabits from './pages/MyHabits'
 import Progress from './pages/Progress'
 import Analytics from './pages/Analytics'
 import Reminders from './pages/Reminders'
+import Diary from './pages/Diary'
 
 const pages = [
   { key: 'today', label: 'Today', component: <Today /> },
@@ -15,6 +16,7 @@ const pages = [
   { key: 'progress', label: 'Progress', component: <Progress /> },
   { key: 'analytics', label: 'Analytics', component: <Analytics /> },
   { key: 'reminders', label: 'Reminders', component: <Reminders /> },
+  { key: 'diary', label: 'Diary', component: <Diary /> },
 ] as const
 
 type PageKey = (typeof pages)[number]['key']

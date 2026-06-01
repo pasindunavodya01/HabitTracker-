@@ -71,6 +71,17 @@ create table if not exists achievements (
   awarded_at timestamptz default now()
 );
 
+-- Journal entries for the diary feature
+create table if not exists journal_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  entry_date date not null,
+  content text not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(user_id, entry_date)
+);
+
 -- Indexes for queries
 create index if not exists idx_habits_user on habits(user_id);
 create index if not exists idx_completions_user on completions(user_id, completed_at);
