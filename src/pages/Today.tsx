@@ -31,7 +31,7 @@ const KIND_META: Record<string, { label: string; icon: string; accent: string; c
 export default function Today() {
   const { user } = useAuth()
   const [habits, setHabits] = useState<Habit[]>([])
-  const [completedLogs, setCompletedLogs] = useState<Record<string, string | null>>({})
+  const [completedLogs, setCompletedLogs] = useState<Record<string, { id: string; note: string | null }[]>>({})
   const [goalInputs, setGoalInputs] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [savingHabitIds, setSavingHabitIds] = useState<Set<string>>(new Set())
@@ -49,7 +49,7 @@ export default function Today() {
           .eq('is_archived', false),
         supabase
           .from('completions')
-          .select('habit_id, note')
+        .select('id, habit_id, note')
           .eq('user_id', user?.id)
           .gte('completed_at', start)
           .lt('completed_at', end),
@@ -75,9 +75,10 @@ export default function Today() {
         .sort((a, b) => (a.metadata?.order_index ?? 999) - (b.metadata?.order_index ?? 999))
 
       setHabits(filteredHabits)
-      const logs: Record<string, string | null> = {}
+      const logs: Record<string, { id: string; note: string | null }[]> = {}
       ;(completionData ?? []).forEach((item) => {
-        logs[item.habit_id] = item.note
+        if (!logs[item.habit_id]) logs[item.habit_id] = []
+        logs[item.habit_id].push({ id: item.id, note: item.note })
       })
       setCompletedLogs(logs)
       setLoading(false)
@@ -85,15 +86,15 @@ export default function Today() {
     load()
   }, [user])
 
-  const completedCount = Object.keys(completedLogs).length
+  const completedCount = Object.keys(completedLogs).filter(id => completedLogs[id].length > 0).length
   const totalCount = habits.length
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
-  const handleComplete = async (habitId: string, note?: string) => {
+  const handleToggleCompletion = async (habitId: string) => {
     if (!user) return
     setSavingHabitIds((c) => new Set(c).add(habitId))
     const habit = habits.find((h) => h.id === habitId)
-    const isCompleted = habitId in completedLogs
+    const isCompleted = !!completedLogs[habitId]?.length
     let error
     if (isCompleted) {
       const { start, end } = todayRange()
@@ -104,23 +105,52 @@ export default function Today() {
         await supabase.from('habits').update({ is_archived: false }).eq('id', habitId)
       }
     } else {
-      const { error: insertError } = await supabase.from('completions').insert([
-        { user_id: user.id, habit_id: habitId, completed_at: new Date().toISOString(), note: note || null },
-      ])
+      const { error: insertError, data } = await supabase.from('completions').insert([
+        { user_id: user.id, habit_id: habitId, completed_at: new Date().toISOString(), note: null },
+      ]).select('id').single()
       error = insertError
-      if (!error && habit?.kind === 'task') {
-        await supabase.from('habits').update({ is_archived: true }).eq('id', habitId)
+      if (!error && data) {
+        setCompletedLogs((c) => ({ ...c, [habitId]: [{ id: data.id, note: null }] }))
+        if (habit?.kind === 'task') {
+          await supabase.from('habits').update({ is_archived: true }).eq('id', habitId)
+        }
       }
     }
     setSavingHabitIds((c) => { const n = new Set(c); n.delete(habitId); return n })
-    if (!error) {
-      if (isCompleted) {
-        setCompletedLogs((c) => { const n = { ...c }; delete n[habitId]; return n })
-      } else {
-        setCompletedLogs((c) => ({ ...c, [habitId]: note || null }))
-        setGoalInputs((c) => { const n = { ...c }; delete n[habitId]; return n })
-      }
+    if (!error && isCompleted) {
+      setCompletedLogs((c) => { const n = { ...c }; delete n[habitId]; return n })
     }
+  }
+
+  const handleAddGoalLog = async (habitId: string, note: string) => {
+    if (!user || !note.trim()) return
+    setSavingHabitIds((c) => new Set(c).add(habitId))
+    const { error, data } = await supabase.from('completions').insert([
+      { user_id: user.id, habit_id: habitId, completed_at: new Date().toISOString(), note },
+    ]).select('id').single()
+
+    if (!error && data) {
+      setCompletedLogs((c) => ({ ...c, [habitId]: [...(c[habitId] || []), { id: data.id, note }] }))
+      setGoalInputs((c) => { const n = { ...c }; delete n[habitId]; return n })
+    }
+    setSavingHabitIds((c) => { const n = new Set(c); n.delete(habitId); return n })
+  }
+
+  const handleRemoveGoalLog = async (habitId: string, completionId: string) => {
+    if (!user) return
+    setSavingHabitIds((c) => new Set(c).add(habitId))
+    const { error } = await supabase.from('completions').delete().eq('id', completionId)
+    if (!error) {
+      setCompletedLogs((c) => {
+        const current = c[habitId] || []
+        const next = current.filter((x) => x.id !== completionId)
+        const n = { ...c }
+        if (next.length === 0) delete n[habitId]
+        else n[habitId] = next
+        return n
+      })
+    }
+    setSavingHabitIds((c) => { const n = new Set(c); n.delete(habitId); return n })
   }
 
   const toggleMilestone = async (habitId: string, milestoneId: string) => {
@@ -151,7 +181,7 @@ export default function Today() {
   ].filter((g) => g.items.length > 0)
 
   const renderCard = (habit: Habit) => {
-    const isCompleted = habit.id in completedLogs
+    const isCompleted = !!completedLogs[habit.id]?.length
     const saving = savingHabitIds.has(habit.id)
     const meta = KIND_META[habit.kind] ?? KIND_META.habit
 
@@ -180,7 +210,7 @@ export default function Today() {
           {/* Checkbox for non-goals */}
           {habit.kind !== 'goal' && (
             <button
-              onClick={() => handleComplete(habit.id)}
+              onClick={() => handleToggleCompletion(habit.id)}
               disabled={saving}
               aria-label={isCompleted ? 'Undo' : meta.completeLabel}
               style={{ borderColor: isCompleted ? '#10b981' : meta.accent }}
@@ -222,7 +252,7 @@ export default function Today() {
           {/* Undo hint on hover when completed for non-goals */}
           {isCompleted && !saving && habit.kind !== 'goal' && (
             <button
-              onClick={() => handleComplete(habit.id)}
+              onClick={() => handleToggleCompletion(habit.id)}
               className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-slate-400 hover:text-slate-600 flex-shrink-0"
             >
               ⟲ Undo
@@ -232,29 +262,30 @@ export default function Today() {
 
         {/* Goal specific features */}
         {habit.kind === 'goal' && (
-          <div className="mt-1 w-full">
+          <div className="mt-1 w-full space-y-3">
+            {/* Render Existing Logs */}
+            {completedLogs[habit.id]?.map((log) => (
+              <div key={log.id} className="flex items-start justify-between gap-4 rounded-xl bg-emerald-50/70 p-3 border border-emerald-100">
+                <div className="text-sm text-emerald-800"><span className="font-semibold mr-1">Update:</span><span className="italic">"{log.note}"</span></div>
+                <button onClick={() => handleRemoveGoalLog(habit.id, log.id)} disabled={saving} className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex-shrink-0 mt-0.5">Undo</button>
+              </div>
+            ))}
+
             {/* Text Input Log for Goals */}
-            {!isCompleted ? (
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Log today's progress (e.g. read 10 pages, ran 2 miles)..."
-                  value={goalInputs[habit.id] || ''}
-                  onChange={(e) => setGoalInputs((prev) => ({ ...prev, [habit.id]: e.target.value }))}
-                  disabled={saving}
-                  className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all"
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (goalInputs[habit.id]?.trim()) { handleComplete(habit.id, goalInputs[habit.id]); } } }}
-                />
-                <button onClick={() => handleComplete(habit.id, goalInputs[habit.id])} disabled={saving || !goalInputs[habit.id]?.trim()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap">
-                  {saving ? 'Saving...' : 'Log Progress'}
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-start justify-between gap-4 rounded-xl bg-emerald-50/70 p-3 border border-emerald-100">
-                <div className="text-sm text-emerald-800"><span className="font-semibold mr-1">Today's update:</span><span className="italic">"{completedLogs[habit.id]}"</span></div>
-                <button onClick={() => handleComplete(habit.id)} disabled={saving} className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex-shrink-0 mt-0.5">Undo</button>
-              </div>
-            )}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <input
+                type="text"
+                placeholder="Log today's progress (e.g. read 10 pages, ran 2 miles)..."
+                value={goalInputs[habit.id] || ''}
+                onChange={(e) => setGoalInputs((prev) => ({ ...prev, [habit.id]: e.target.value }))}
+                disabled={saving}
+                className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (goalInputs[habit.id]?.trim()) { handleAddGoalLog(habit.id, goalInputs[habit.id]); } } }}
+              />
+              <button onClick={() => handleAddGoalLog(habit.id, goalInputs[habit.id] || '')} disabled={saving || !goalInputs[habit.id]?.trim()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap">
+                {saving ? 'Saving...' : 'Log Progress'}
+              </button>
+            </div>
 
             {/* Milestones rendering */}
             {habit.metadata?.milestones?.length > 0 && (
