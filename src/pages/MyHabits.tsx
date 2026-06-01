@@ -34,6 +34,7 @@ export default function MyHabits() {
   const [confirmArchive, setConfirmArchive] = useState<string | null>(null)
   const [milestones, setMilestones] = useState<{ id: string; title: string; done: boolean }[]>([])
   const [newMilestone, setNewMilestone] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const activeTabMeta = TABS.find((t) => t.id === activeTab) ?? TABS[0]
 
@@ -53,22 +54,45 @@ export default function MyHabits() {
     loadHabits()
   }, [user, showArchived])
 
-  const handleCreateHabit = async (event: React.FormEvent) => {
+  const handleSaveHabit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!user || !title.trim()) return
     setSaving(true)
-    const metadata = {
-      order_index: habits.length,
-      ...(activeTab === 'task' || activeTab === 'goal'
-        ? { target_date: targetDate || null }
-        : { days_of_week: daysOfWeek }),
-      ...(activeTab === 'goal' && milestones.length > 0 ? { milestones } : {}),
+
+    let error = null
+    if (editingId) {
+      const existingHabit = habits.find((h) => h.id === editingId)
+      const metadata: any = {
+        ...existingHabit?.metadata,
+        target_date: (activeTab === 'task' || activeTab === 'goal') ? (targetDate || null) : null,
+        days_of_week: (activeTab === 'task' || activeTab === 'goal') ? null : daysOfWeek,
+        milestones: activeTab === 'goal' ? milestones : null,
+      }
+      Object.keys(metadata).forEach(k => { if (metadata[k] === null) delete metadata[k] })
+
+      const kind = existingHabit?.kind === 'routine' && activeTab === 'habit' ? 'routine' : activeTab
+      const { error: updateError } = await supabase.from('habits').update({
+        title: title.trim(),
+        description: description.trim() || null,
+        kind,
+        metadata
+      }).eq('id', editingId)
+      error = updateError
+    } else {
+      const metadata = {
+        order_index: habits.length,
+        ...(activeTab === 'task' || activeTab === 'goal' ? { target_date: targetDate || null } : { days_of_week: daysOfWeek }),
+        ...(activeTab === 'goal' && milestones.length > 0 ? { milestones } : {}),
+      }
+      const { error: insertError } = await supabase.from('habits').insert([
+        { user_id: user.id, title: title.trim(), description: description.trim() || null, kind: activeTab, metadata },
+      ])
+      error = insertError
     }
-    const { error } = await supabase.from('habits').insert([
-      { user_id: user.id, title: title.trim(), description: description.trim() || null, kind: activeTab, metadata },
-    ])
+
     setSaving(false)
     if (!error) {
+      setEditingId(null)
       setTitle('')
       setDescription('')
       setDaysOfWeek([0, 1, 2, 3, 4, 5, 6])
@@ -84,6 +108,34 @@ export default function MyHabits() {
       const sorted = (data ?? []).sort((a, b) => (a.metadata?.order_index ?? 999) - (b.metadata?.order_index ?? 999))
       setHabits(sorted)
     }
+  }
+
+  const handleEdit = (habit: Habit) => {
+    setEditingId(habit.id)
+    setTitle(habit.title)
+    setDescription(habit.description || '')
+    
+    let newTab = habit.kind
+    if (newTab === 'routine') newTab = 'habit'
+    setActiveTab(newTab)
+
+    if (newTab === 'task' || newTab === 'goal') setTargetDate(habit.metadata?.target_date || '')
+    else setDaysOfWeek(habit.metadata?.days_of_week || [0, 1, 2, 3, 4, 5, 6])
+    
+    if (newTab === 'goal') setMilestones(habit.metadata?.milestones || [])
+    else setMilestones([])
+    setNewMilestone('')
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setTitle('')
+    setDescription('')
+    setDaysOfWeek([0, 1, 2, 3, 4, 5, 6])
+    setTargetDate('')
+    setMilestones([])
+    setNewMilestone('')
   }
 
   const toggleArchive = async (habitId: string, currentStatus: boolean) => {
@@ -287,12 +339,20 @@ export default function MyHabits() {
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => habit.is_archived ? toggleArchive(habit.id, habit.is_archived) : setConfirmArchive(habit.id)}
-                        className="flex-shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
-                      >
-                        {habit.is_archived ? 'Restore' : 'Archive'}
-                      </button>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => handleEdit(habit)}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-blue-600 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => habit.is_archived ? toggleArchive(habit.id, habit.is_archived) : setConfirmArchive(habit.id)}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+                        >
+                          {habit.is_archived ? 'Restore' : 'Archive'}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -301,12 +361,17 @@ export default function MyHabits() {
           )}
         </div>
 
-        {/* Add form */}
+        {/* Add/Edit form */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm h-fit">
-          <h3 className="font-bold text-slate-800 mb-4">
-            {activeTabMeta.icon} Add {activeTabMeta.label}
-          </h3>
-          <form onSubmit={handleCreateHabit} className="space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-slate-800">
+              {activeTabMeta.icon} {editingId ? 'Edit' : 'Add'} {activeTabMeta.label}
+            </h3>
+            {editingId && (
+              <button type="button" onClick={cancelEdit} className="text-xs text-slate-400 hover:text-slate-600 font-semibold">Cancel</button>
+            )}
+          </div>
+          <form onSubmit={handleSaveHabit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">Title</label>
               <input
@@ -402,7 +467,7 @@ export default function MyHabits() {
               className="w-full rounded-xl py-2.5 text-sm font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: activeTabMeta.accent }}
             >
-              {saving ? 'Saving…' : `Add ${activeTabMeta.label}`}
+              {saving ? 'Saving…' : editingId ? 'Save Changes' : `Add ${activeTabMeta.label}`}
             </button>
           </form>
         </div>
