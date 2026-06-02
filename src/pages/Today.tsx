@@ -35,6 +35,20 @@ type TimetableRow = {
   end_time: string
 }
 
+type ProjectStep = {
+  id: string
+  title: string
+  is_completed: boolean
+}
+
+type Project = {
+  id: string
+  title: string
+  description: string | null
+  target_date: string | null
+  steps: ProjectStep[]
+}
+
 export default function Today() {
   const { user } = useAuth()
   const [habits, setHabits] = useState<Habit[]>([])
@@ -43,6 +57,7 @@ export default function Today() {
   const [loading, setLoading] = useState(true)
   const [savingHabitIds, setSavingHabitIds] = useState<Set<string>>(new Set())
   const [timetable, setTimetable] = useState<TimetableRow[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
@@ -55,7 +70,7 @@ export default function Today() {
     async function load() {
       setLoading(true)
       const { start, end } = todayRange()
-      const [{ data: habitsData }, { data: completionData }, { data: timetableData }] = await Promise.all([
+      const [{ data: habitsData }, { data: completionData }, { data: timetableData }, { data: projectsData }] = await Promise.all([
         supabase
           .from('habits')
           .select('id, title, description, kind, is_archived, metadata')
@@ -70,6 +85,10 @@ export default function Today() {
         supabase
           .from('timetables')
           .select('id, activity, start_time, end_time, days_of_week')
+          .eq('user_id', user?.id),
+        supabase
+          .from('projects')
+          .select('*')
           .eq('user_id', user?.id)
       ])
 
@@ -104,6 +123,7 @@ export default function Today() {
         .filter((t: any) => t.days_of_week.includes(todayDayOfWeek))
         .sort((a, b) => a.start_time.localeCompare(b.start_time))
       setTimetable(filteredTimetable)
+      setProjects(projectsData ?? [])
 
       setLoading(false)
     }
@@ -187,6 +207,14 @@ export default function Today() {
     const newMeta = { ...habit.metadata, milestones: newMilestones }
     setHabits((c) => c.map((h) => (h.id === habitId ? { ...h, metadata: newMeta } : h)))
     await supabase.from('habits').update({ metadata: newMeta }).eq('id', habitId)
+  }
+
+  const handleToggleProjectStep = async (projectId: string, stepId: string) => {
+    const project = projects.find(p => p.id === projectId)
+    if (!project) return
+    const newSteps = project.steps.map(s => s.id === stepId ? { ...s, is_completed: !s.is_completed } : s)
+    setProjects(c => c.map(p => p.id === projectId ? { ...p, steps: newSteps } : p))
+    await supabase.from('projects').update({ steps: newSteps }).eq('id', projectId)
   }
 
   const summaryText = useMemo(() => {
@@ -338,6 +366,13 @@ export default function Today() {
     )
   }
 
+  const activeProjects = projects.filter((p) => {
+    const total = p.steps.length
+    if (total === 0) return true // Show empty plans so users remember to add steps
+    const completed = p.steps.filter((s) => s.is_completed).length
+    return completed < total // Only show if not 100% finished
+  })
+
   return (
     <section className="space-y-6 max-w-2xl mx-auto">
       {/* Header */}
@@ -373,7 +408,7 @@ export default function Today() {
           <div className="mx-auto mb-3 w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-slate-400">Loading today's items…</p>
         </div>
-      ) : habits.length === 0 && timetable.length === 0 ? (
+      ) : habits.length === 0 && timetable.length === 0 && activeProjects.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
           <p className="text-3xl mb-3">📋</p>
           <p className="text-slate-500 font-medium">Nothing scheduled today</p>
@@ -430,7 +465,51 @@ export default function Today() {
             </div>
           )}
 
-          <div className={`space-y-7 ${timetable.length > 0 ? 'mt-6' : ''}`}>
+          {activeProjects.length > 0 && (
+            <div className={`space-y-2 ${timetable.length > 0 ? 'mt-6' : ''}`}>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 px-1">Active Plans</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {activeProjects.map(project => {
+                  const totalSteps = project.steps.length
+                  const completedSteps = project.steps.filter(s => s.is_completed).length
+                  const progress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0
+                  const nextStep = project.steps.find(s => !s.is_completed)
+
+                  return (
+                    <div key={project.id} style={{ borderLeft: '3px solid #f43f5e' }} className="rounded-2xl border border-slate-200/80 bg-white p-4 flex flex-col hover:border-slate-300 hover:shadow-sm transition-all">
+                      <div className="flex justify-between items-start gap-2 mb-3">
+                        <h4 className="font-semibold text-sm text-slate-800 leading-snug">{project.title}</h4>
+                        <span className="text-xs font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md">{progress}%</span>
+                      </div>
+                      
+                      <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden mb-3">
+                        <div className="h-full bg-rose-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+                      </div>
+                      
+                      {nextStep ? (
+                        <div className="mt-auto flex items-start gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          <button
+                            onClick={() => handleToggleProjectStep(project.id, nextStep.id)}
+                            className="w-4 h-4 mt-0.5 rounded border-2 border-slate-300 bg-white hover:border-rose-400 flex-shrink-0 flex items-center justify-center transition-colors"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Next Step</p>
+                            <p className="text-xs text-slate-700 font-medium truncate">{nextStep.title}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-auto flex items-center justify-center bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                          <p className="text-xs text-slate-400 font-medium">No steps added yet.</p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className={`space-y-7 ${(timetable.length > 0 || activeProjects.length > 0) ? 'mt-6' : ''}`}>
             {groups.map(({ label, items }) => (
               <div key={label} className="space-y-2">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 px-1">{label}</h3>
