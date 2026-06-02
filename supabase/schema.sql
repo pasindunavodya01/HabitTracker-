@@ -82,6 +82,17 @@ create table if not exists journal_entries (
   unique(user_id, entry_date)
 );
 
+-- Timetables for daily schedule
+create table if not exists timetables (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  activity text not null,
+  start_time text not null,
+  end_time text not null,
+  days_of_week jsonb not null default '[0,1,2,3,4,5,6]'::jsonb,
+  created_at timestamptz default now()
+);
+
 -- Indexes for queries
 create index if not exists idx_habits_user on habits(user_id);
 create index if not exists idx_completions_user on completions(user_id, completed_at);
