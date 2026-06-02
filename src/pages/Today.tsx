@@ -104,8 +104,9 @@ export default function Today() {
     load()
   }, [user])
 
-  const completedCount = Object.keys(completedLogs).filter(id => completedLogs[id].length > 0).length
-  const totalCount = habits.length
+  const trackableHabits = habits.filter(h => h.kind !== 'goal')
+  const totalCount = trackableHabits.length
+  const completedCount = trackableHabits.filter(h => completedLogs[h.id]?.length > 0).length
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
   const handleToggleCompletion = async (habitId: string) => {
@@ -366,7 +367,7 @@ export default function Today() {
           <div className="mx-auto mb-3 w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-slate-400">Loading today's items…</p>
         </div>
-      ) : totalCount === 0 && timetable.length === 0 ? (
+      ) : habits.length === 0 && timetable.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
           <p className="text-3xl mb-3">📋</p>
           <p className="text-slate-500 font-medium">Nothing scheduled today</p>
