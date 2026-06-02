@@ -7,6 +7,9 @@ LifeOS is a comprehensive personal growth application designed to help you build
 - **Today's Dashboard**: A focused view of your daily habits, routines, tasks, and goals.
 - **Habits & Routines**: Track daily or weekly repeating habits. Build positive routines and break bad ones.
 - **Tasks & Goals**: Set one-off tasks with target dates or break down long-term goals into actionable milestones.
+- **Plans**: Break down large projects into smaller, manageable parts and track your next steps on the dashboard.
+- **Diary**: Reflect on your day, write journal entries, and view a history of your completed activities.
+- **Timetable**: Schedule your daily activities and view what's currently happening right on your dashboard.
 - **Progress & Analytics**: Visualize your consistency, track your streaks, and analyze your productivity trends over time with interactive charts.
 - **Reminders**: Schedule browser notifications to ensure you never miss a daily check-in.
 - **Secure Authentication**: User accounts and data syncing powered by Supabase.
