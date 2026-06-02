@@ -10,10 +10,12 @@ import Analytics from './pages/Analytics'
 import Reminders from './pages/Reminders'
 import Diary from './pages/Diary'
 import Timetable from './pages/Timetable'
+import Projects from './pages/Projects'
 
 const pages = [
   { key: 'today', label: 'Today', component: <Today /> },
   { key: 'timetable', label: 'Timetable', component: <Timetable /> },
+  { key: 'projects', label: 'Plans', component: <Projects /> },
   { key: 'habits', label: 'My Items', component: <MyHabits /> },
   { key: 'diary', label: 'Diary', component: <Diary /> },
   { key: 'progress', label: 'Progress', component: <Progress /> },

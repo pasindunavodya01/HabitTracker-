@@ -93,6 +93,17 @@ create table if not exists timetables (
   created_at timestamptz default now()
 );
 
+-- Projects for big plans
+create table if not exists projects (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  title text not null,
+  description text,
+  target_date text,
+  steps jsonb not null default '[]'::jsonb,
+  created_at timestamptz default now()
+);
+
 -- Indexes for queries
 create index if not exists idx_habits_user on habits(user_id);
 create index if not exists idx_completions_user on completions(user_id, completed_at);
