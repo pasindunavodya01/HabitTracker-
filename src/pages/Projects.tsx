@@ -39,7 +39,7 @@ export default function Projects() {
       const { data } = await supabase
         .from('projects')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
       setProjects(data ?? [])
       setLoading(false)
@@ -249,7 +249,18 @@ export default function Projects() {
 
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">Target Date <span className="lowercase font-normal text-slate-400">(optional)</span></label>
-              <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-1" />
+              <div className="flex items-center gap-2">
+                <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-1" />
+                {targetDate && (
+                  <button
+                    type="button"
+                    onClick={() => setTargetDate('')}
+                    className="rounded-xl px-4 py-2.5 bg-slate-100 text-sm font-semibold text-slate-500 hover:bg-slate-200 transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="pt-2 border-t border-slate-100">

@@ -128,11 +128,11 @@ export default function Timetable() {
           ) : (
             <div className="space-y-3">
               {entries.map(entry => (
-                <div key={entry.id} className="rounded-xl border border-slate-200 p-4 flex justify-between items-center bg-slate-50">
-                  <div>
-                    <p className="font-semibold text-slate-800">{entry.activity}</p>
+                <div key={entry.id} className="rounded-xl border border-slate-200 p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 sm:gap-2 bg-slate-50">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-800 break-words">{entry.activity}</p>
                     <p className="text-xs text-slate-500 mt-0.5">{formatTime(entry.start_time)} - {formatTime(entry.end_time)}</p>
-                    <div className="flex gap-1 mt-2">
+                    <div className="flex flex-wrap gap-1 mt-2">
                       {DAY_LABELS.map((d, i) => (
                         <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded ${entry.days_of_week.includes(i) ? 'bg-blue-100 text-blue-700 font-bold' : 'bg-slate-200 text-slate-400'}`}>
                           {d}
@@ -140,9 +140,9 @@ export default function Timetable() {
                       ))}
                     </div>
                   </div>
-                  <div className="flex-shrink-0">
+                  <div className="flex items-center justify-end w-full sm:w-auto flex-shrink-0 mt-1 sm:mt-0">
                     {deletingId === entry.id ? (
-                      <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1">
                         <button onClick={() => handleDelete(entry.id)} className="text-[10px] uppercase tracking-wide bg-red-100 text-red-700 px-2 py-1.5 rounded font-bold hover:bg-red-200">Confirm</button>
                         <button onClick={() => setDeletingId(null)} className="text-[10px] uppercase tracking-wide bg-slate-200 text-slate-600 px-2 py-1.5 rounded font-bold hover:bg-slate-300">Cancel</button>
                       </div>

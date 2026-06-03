@@ -15,8 +15,8 @@ import Projects from './pages/Projects'
 const pages = [
   { key: 'today', label: 'Today', component: <Today /> },
   { key: 'timetable', label: 'Timetable', component: <Timetable /> },
-  { key: 'projects', label: 'Plans', component: <Projects /> },
   { key: 'habits', label: 'My Items', component: <MyHabits /> },
+  { key: 'projects', label: 'Plans', component: <Projects /> },
   { key: 'diary', label: 'Diary', component: <Diary /> },
   { key: 'progress', label: 'Progress', component: <Progress /> },
   { key: 'analytics', label: 'Analytics', component: <Analytics /> },

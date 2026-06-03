@@ -59,6 +59,7 @@ export default function Today() {
   const [timetable, setTimetable] = useState<TimetableRow[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [expandedTimetableId, setExpandedTimetableId] = useState<string | null>(null)
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -454,7 +455,10 @@ export default function Today() {
                          {isActive && <span className="absolute w-3 h-3 rounded-full bg-blue-400 animate-ping opacity-75" />}
                          <div className={`w-1.5 h-1.5 rounded-full z-10 ${isActive ? 'bg-blue-600' : 'bg-blue-400'}`} />
                        </div>
-                       <div className={`font-semibold text-sm flex-1 truncate ${isActive ? 'text-blue-900' : 'text-slate-800'}`}>
+                       <div
+                         onClick={() => setExpandedTimetableId(expandedTimetableId === t.id ? null : t.id)}
+                         className={`font-semibold text-sm flex-1 cursor-pointer transition-all ${expandedTimetableId === t.id ? 'whitespace-normal break-words' : 'truncate'} ${isActive ? 'text-blue-900' : 'text-slate-800'}`}
+                       >
                          {t.activity}
                          {isActive && <span className="ml-2 inline-flex items-center rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 uppercase tracking-wider">Now</span>}
                        </div>
