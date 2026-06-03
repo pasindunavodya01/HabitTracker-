@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
@@ -31,6 +31,7 @@ export default function Projects() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const stepInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!user) return
@@ -129,6 +130,7 @@ export default function Projects() {
     if (newStep.trim()) {
       setSteps(s => [...s, { id: crypto.randomUUID(), title: newStep.trim(), is_completed: false }])
       setNewStep('')
+      stepInputRef.current?.focus()
     }
   }
 
@@ -275,6 +277,7 @@ export default function Projects() {
               </div>
               <div className="flex gap-2">
                 <input
+                  ref={stepInputRef}
                   value={newStep}
                   onChange={e => setNewStep(e.target.value)}
                   placeholder="Add a step..."

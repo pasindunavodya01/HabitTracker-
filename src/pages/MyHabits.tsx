@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
@@ -35,6 +35,7 @@ export default function MyHabits() {
   const [milestones, setMilestones] = useState<{ id: string; title: string; done: boolean }[]>([])
   const [newMilestone, setNewMilestone] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
+  const milestoneInputRef = useRef<HTMLInputElement>(null)
 
   const activeTabMeta = TABS.find((t) => t.id === activeTab) ?? TABS[0]
 
@@ -430,15 +431,16 @@ export default function MyHabits() {
                     </div>
                     <div className="flex gap-2">
                       <input
+                        ref={milestoneInputRef}
                         value={newMilestone}
                         onChange={e => setNewMilestone(e.target.value)}
                         placeholder="Add a milestone..."
                         className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (newMilestone.trim()) { setMilestones(ms => [...ms, { id: crypto.randomUUID(), title: newMilestone.trim(), done: false }]); setNewMilestone(''); } } }}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (newMilestone.trim()) { setMilestones(ms => [...ms, { id: crypto.randomUUID(), title: newMilestone.trim(), done: false }]); setNewMilestone(''); milestoneInputRef.current?.focus(); } } }}
                       />
                       <button
                         type="button"
-                        onClick={() => { if (newMilestone.trim()) { setMilestones(ms => [...ms, { id: crypto.randomUUID(), title: newMilestone.trim(), done: false }]); setNewMilestone(''); } }}
+                        onClick={() => { if (newMilestone.trim()) { setMilestones(ms => [...ms, { id: crypto.randomUUID(), title: newMilestone.trim(), done: false }]); setNewMilestone(''); milestoneInputRef.current?.focus(); } }}
                         className="rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-300"
                       >
                         Add
