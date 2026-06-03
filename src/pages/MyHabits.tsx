@@ -185,6 +185,22 @@ export default function MyHabits() {
     await supabase.from('habits').update({ metadata: newTargetMeta }).eq('id', targetHabit.id)
   }
 
+  const moveMilestone = (index: number, direction: 'up' | 'down') => {
+    setMilestones(ms => {
+      const newMs = [...ms]
+      if (direction === 'up' && index > 0) {
+        const temp = newMs[index - 1]
+        newMs[index - 1] = newMs[index]
+        newMs[index] = temp
+      } else if (direction === 'down' && index < newMs.length - 1) {
+        const temp = newMs[index + 1]
+        newMs[index + 1] = newMs[index]
+        newMs[index] = temp
+      }
+      return newMs
+    })
+  }
+
   return (
     <section className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
@@ -422,10 +438,14 @@ export default function MyHabits() {
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">Milestones</label>
                     <div className="space-y-2 mb-2">
-                      {milestones.map(m => (
+                      {milestones.map((m, index) => (
                         <div key={m.id} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 text-sm">
-                          <span>{m.title}</span>
-                          <button type="button" onClick={() => setMilestones(ms => ms.filter(x => x.id !== m.id))} className="text-slate-400 hover:text-red-500">✕</button>
+                          <span className="truncate mr-2">{m.title}</span>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button type="button" onClick={() => moveMilestone(index, 'up')} disabled={index === 0} className="text-slate-400 hover:text-slate-600 disabled:opacity-30 p-1 text-xs transition-colors">▲</button>
+                            <button type="button" onClick={() => moveMilestone(index, 'down')} disabled={index === milestones.length - 1} className="text-slate-400 hover:text-slate-600 disabled:opacity-30 p-1 text-xs transition-colors">▼</button>
+                            <button type="button" onClick={() => setMilestones(ms => ms.filter(x => x.id !== m.id))} className="text-slate-400 hover:text-red-500 p-1 ml-1 transition-colors">✕</button>
+                          </div>
                         </div>
                       ))}
                     </div>

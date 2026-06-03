@@ -134,6 +134,22 @@ export default function Projects() {
     }
   }
 
+  const moveStep = (index: number, direction: 'up' | 'down') => {
+    setSteps(s => {
+      const newS = [...s]
+      if (direction === 'up' && index > 0) {
+        const temp = newS[index - 1]
+        newS[index - 1] = newS[index]
+        newS[index] = temp
+      } else if (direction === 'down' && index < newS.length - 1) {
+        const temp = newS[index + 1]
+        newS[index + 1] = newS[index]
+        newS[index] = temp
+      }
+      return newS
+    })
+  }
+
   return (
     <section className="space-y-6 max-w-4xl mx-auto">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -268,10 +284,14 @@ export default function Projects() {
             <div className="pt-2 border-t border-slate-100">
               <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Plan Parts</label>
               <div className="space-y-2 mb-3">
-                {steps.map(step => (
+                {steps.map((step, index) => (
                   <div key={step.id} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 text-sm">
-                    <span className={step.is_completed ? 'line-through text-slate-400' : 'text-slate-700'}>{step.title}</span>
-                    <button type="button" onClick={() => setSteps(s => s.filter(x => x.id !== step.id))} className="text-slate-400 hover:text-red-500">✕</button>
+                    <span className={`truncate mr-2 ${step.is_completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>{step.title}</span>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button type="button" onClick={() => moveStep(index, 'up')} disabled={index === 0} className="text-slate-400 hover:text-slate-600 disabled:opacity-30 p-1 text-xs transition-colors">▲</button>
+                      <button type="button" onClick={() => moveStep(index, 'down')} disabled={index === steps.length - 1} className="text-slate-400 hover:text-slate-600 disabled:opacity-30 p-1 text-xs transition-colors">▼</button>
+                      <button type="button" onClick={() => setSteps(s => s.filter(x => x.id !== step.id))} className="text-slate-400 hover:text-red-500 p-1 ml-1 transition-colors">✕</button>
+                    </div>
                   </div>
                 ))}
               </div>
