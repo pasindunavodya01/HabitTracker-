@@ -32,6 +32,13 @@ export default function MyHabits() {
   const [activeTab, setActiveTab] = useState('habit')
   const [showArchived, setShowArchived] = useState(false)
   const [confirmArchive, setConfirmArchive] = useState<string | null>(null)
+  const [repeatType, setRepeatType] = useState<'days_of_week' | 'interval'>('days_of_week')
+  const [intervalValue, setIntervalValue] = useState<number>(1)
+  const [intervalUnit, setIntervalUnit] = useState<'days' | 'weeks'>('weeks')
+  const [startDate, setStartDate] = useState<string>(() => {
+    const today = new Date()
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  })
   const [milestones, setMilestones] = useState<{ id: string; title: string; done: boolean }[]>([])
   const [newMilestone, setNewMilestone] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -66,7 +73,11 @@ export default function MyHabits() {
       const metadata: any = {
         ...existingHabit?.metadata,
         target_date: (activeTab === 'task' || activeTab === 'goal') ? (targetDate || null) : null,
-        days_of_week: (activeTab === 'task' || activeTab === 'goal') ? null : daysOfWeek,
+        repeat_type: (activeTab === 'task' || activeTab === 'goal') ? null : repeatType,
+        days_of_week: (activeTab === 'task' || activeTab === 'goal') ? null : (repeatType === 'days_of_week' ? daysOfWeek : null),
+        interval_value: (activeTab === 'task' || activeTab === 'goal') ? null : (repeatType === 'interval' ? intervalValue : null),
+        interval_unit: (activeTab === 'task' || activeTab === 'goal') ? null : (repeatType === 'interval' ? intervalUnit : null),
+        start_date: (activeTab === 'task' || activeTab === 'goal') ? null : (repeatType === 'interval' ? startDate : null),
         milestones: activeTab === 'goal' ? milestones : null,
       }
       Object.keys(metadata).forEach(k => { if (metadata[k] === null) delete metadata[k] })
@@ -82,7 +93,12 @@ export default function MyHabits() {
     } else {
       const metadata = {
         order_index: habits.length,
-        ...(activeTab === 'task' || activeTab === 'goal' ? { target_date: targetDate || null } : { days_of_week: daysOfWeek }),
+        ...(activeTab === 'task' || activeTab === 'goal' 
+            ? { target_date: targetDate || null } 
+            : { 
+                repeat_type: repeatType,
+                ...(repeatType === 'days_of_week' ? { days_of_week: daysOfWeek } : { interval_value: intervalValue, interval_unit: intervalUnit, start_date: startDate })
+              }),
         ...(activeTab === 'goal' && milestones.length > 0 ? { milestones } : {}),
       }
       const { error: insertError } = await supabase.from('habits').insert([
@@ -97,6 +113,11 @@ export default function MyHabits() {
       setTitle('')
       setDescription('')
       setDaysOfWeek([0, 1, 2, 3, 4, 5, 6])
+      setRepeatType('days_of_week')
+      setIntervalValue(1)
+      setIntervalUnit('weeks')
+      const today = new Date()
+      setStartDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`)
       setTargetDate('')
       setShowArchived(false)
       setMilestones([])
@@ -121,7 +142,14 @@ export default function MyHabits() {
     setActiveTab(newTab)
 
     if (newTab === 'task' || newTab === 'goal') setTargetDate(habit.metadata?.target_date || '')
-    else setDaysOfWeek(habit.metadata?.days_of_week || [0, 1, 2, 3, 4, 5, 6])
+    else {
+      setRepeatType(habit.metadata?.repeat_type || 'days_of_week')
+      setDaysOfWeek(habit.metadata?.days_of_week || [0, 1, 2, 3, 4, 5, 6])
+      setIntervalValue(habit.metadata?.interval_value || 1)
+      setIntervalUnit(habit.metadata?.interval_unit || 'weeks')
+      const today = new Date()
+      setStartDate(habit.metadata?.start_date || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`)
+    }
     
     if (newTab === 'goal') setMilestones(habit.metadata?.milestones || [])
     else setMilestones([])
@@ -134,6 +162,11 @@ export default function MyHabits() {
     setTitle('')
     setDescription('')
     setDaysOfWeek([0, 1, 2, 3, 4, 5, 6])
+    setRepeatType('days_of_week')
+    setIntervalValue(1)
+    setIntervalUnit('weeks')
+    const today = new Date()
+    setStartDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`)
     setTargetDate('')
     setMilestones([])
     setNewMilestone('')
@@ -297,7 +330,7 @@ export default function MyHabits() {
                               📅 {habit.metadata.target_date}
                             </span>
                           )}
-                          {habit.kind !== 'task' && habit.kind !== 'goal' && Array.isArray(habit.metadata?.days_of_week) && (
+                          {habit.kind !== 'task' && habit.kind !== 'goal' && (!habit.metadata?.repeat_type || habit.metadata?.repeat_type === 'days_of_week') && Array.isArray(habit.metadata?.days_of_week) && (
                             <div className="flex flex-wrap gap-0.5">
                               {DAY_LABELS.map((d, i) => (
                                 <span
@@ -313,6 +346,11 @@ export default function MyHabits() {
                                 </span>
                               ))}
                             </div>
+                          )}
+                          {habit.kind !== 'task' && habit.kind !== 'goal' && habit.metadata?.repeat_type === 'interval' && (
+                            <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                              🔄 Every {habit.metadata.interval_value} {habit.metadata.interval_unit} (from {habit.metadata.start_date})
+                            </span>
                           )}
                         </div>
                         
@@ -472,25 +510,66 @@ export default function MyHabits() {
             ) : (
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Repeat on</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {DAY_LABELS.map((d, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() =>
-                        setDaysOfWeek((c) => c.includes(i) ? c.filter((v) => v !== i) : [...c, i])
-                      }
-                      className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-all"
-                      style={
-                        daysOfWeek.includes(i)
-                          ? { backgroundColor: activeTabMeta.accent, color: '#fff' }
-                          : { backgroundColor: '#f1f5f9', color: '#94a3b8' }
-                      }
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
+                <select
+                  value={repeatType}
+                  onChange={(e) => setRepeatType(e.target.value as 'days_of_week' | 'interval')}
+                  className="w-full mb-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                >
+                  <option value="days_of_week">Specific Days of the Week</option>
+                  <option value="interval">Custom Interval</option>
+                </select>
+
+                {repeatType === 'days_of_week' ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {DAY_LABELS.map((d, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() =>
+                          setDaysOfWeek((c) => c.includes(i) ? c.filter((v) => v !== i) : [...c, i])
+                        }
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold transition-all"
+                        style={
+                          daysOfWeek.includes(i)
+                            ? { backgroundColor: activeTabMeta.accent, color: '#fff' }
+                            : { backgroundColor: '#f1f5f9', color: '#94a3b8' }
+                        }
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-slate-600">Every</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={intervalValue}
+                        onChange={(e) => setIntervalValue(Number(e.target.value))}
+                        className="w-16 rounded-xl border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-blue-400"
+                      />
+                      <select
+                        value={intervalUnit}
+                        onChange={(e) => setIntervalUnit(e.target.value as 'days' | 'weeks')}
+                        className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-blue-400 bg-white"
+                      >
+                        <option value="days">Days</option>
+                        <option value="weeks">Weeks</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <span className="text-sm text-slate-600">Starting on</span>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-blue-400 bg-white flex-1"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

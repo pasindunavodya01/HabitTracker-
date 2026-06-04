@@ -103,8 +103,24 @@ export default function Today() {
           if (h.kind === 'task') {
             if (h.metadata?.target_date && h.metadata.target_date !== selectedDate) return false
           } else if (h.kind !== 'goal') {
-            const days = h.metadata?.days_of_week
-            if (Array.isArray(days) && !days.includes(targetDayOfWeek)) return false
+            const repeatType = h.metadata?.repeat_type || 'days_of_week'
+            if (repeatType === 'days_of_week') {
+              const days = h.metadata?.days_of_week
+              if (Array.isArray(days) && !days.includes(targetDayOfWeek)) return false
+            } else if (repeatType === 'interval') {
+              const startDateStr = h.metadata?.start_date
+              const intervalValue = h.metadata?.interval_value || 1
+              const intervalUnit = h.metadata?.interval_unit || 'days'
+              if (startDateStr) {
+                const [sy, sm, sd] = startDateStr.split('-').map(Number)
+                const start = new Date(sy, sm - 1, sd, 0, 0, 0, 0)
+                const diffTime = targetDateObj.getTime() - start.getTime()
+                if (diffTime < 0) return false
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+                const intervalDays = intervalUnit === 'weeks' ? intervalValue * 7 : intervalValue
+                if (diffDays % intervalDays !== 0) return false
+              }
+            }
           }
           return true
         })
