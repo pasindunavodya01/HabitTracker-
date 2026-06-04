@@ -51,9 +51,19 @@ function StatCard({
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
+
+  let displayLabel = label
+  if (typeof label === 'string' && label.includes('-')) {
+    const parts = label.split('-')
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      displayLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    }
+  }
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg text-xs">
-      <p className="font-semibold text-slate-500 mb-1">{label}</p>
+      <p className="font-semibold text-slate-500 mb-1">{displayLabel}</p>
       <p className="font-bold text-slate-800">{payload[0].value} completions</p>
     </div>
   )
@@ -219,6 +229,7 @@ export default function Progress() {
                       tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }}
                       axisLine={false} tickLine={false}
                       interval={timeRange === 'all_time' ? 13 : timeRange === 'monthly' ? 5 : 0}
+                    tickFormatter={(val) => (val && typeof val === 'string' ? val.split('-').slice(1).join('/') : '')}
                     />
                     <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={24} />
                     <Tooltip content={<CustomTooltip />} />
@@ -251,6 +262,7 @@ export default function Progress() {
                       tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }}
                       axisLine={false} tickLine={false}
                       interval={timeRange === 'all_time' ? 13 : timeRange === 'monthly' ? 5 : 0}
+                    tickFormatter={(val) => (val && typeof val === 'string' ? val.split('-').slice(1).join('/') : '')}
                     />
                     <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={24} />
                     <Tooltip content={<CustomTooltip />} />
