@@ -38,9 +38,18 @@ function scheduleReminder(reminder: ReminderRow, habitTitle: string, timers: Mut
 
   const timer = window.setTimeout(async () => {
     if (Notification.permission === 'granted') {
-      new Notification(`Reminder: ${habitTitle}`, {
-        body: `Time to complete ${habitTitle}`,
-      })
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.showNotification(`Reminder: ${habitTitle}`, {
+            body: `Time to complete ${habitTitle}`,
+            icon: '/icon-192.png'
+          })
+        })
+      } else {
+        new Notification(`Reminder: ${habitTitle}`, {
+          body: `Time to complete ${habitTitle}`,
+        })
+      }
     }
     scheduleReminder(reminder, habitTitle, timers)
   }, delay)
