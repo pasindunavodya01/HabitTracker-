@@ -81,6 +81,7 @@ export default function Diary() {
 
   const handleSaveJournal = async () => {
     if (!user) return
+    if (!journalId && !journalContent.trim()) return // Don't save empty entries
     setSavingJournal(true)
     if (journalId) {
       await supabase
@@ -148,6 +149,7 @@ export default function Diary() {
           <textarea
             value={journalContent}
             onChange={(e) => setJournalContent(e.target.value)}
+            onBlur={handleSaveJournal}
             placeholder="Write about your day, lessons learned, or anything you want..."
             className="flex-1 w-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none transition-all"
           />
