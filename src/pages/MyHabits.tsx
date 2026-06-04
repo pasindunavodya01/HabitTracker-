@@ -322,7 +322,7 @@ export default function MyHabits() {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-800 text-sm leading-snug break-words">{habit.title}</p>
                         {habit.description && (
-                          <p className="text-xs text-slate-400 mt-0.5 truncate">{habit.description}</p>
+                          <p className="text-xs text-slate-400 mt-0.5 line-clamp-2 break-words">{habit.description}</p>
                         )}
                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                           {(habit.kind === 'task' || habit.kind === 'goal') && habit.metadata?.target_date && (
@@ -359,11 +359,11 @@ export default function MyHabits() {
                           <div className="mt-3 space-y-1.5 border-t border-slate-200/60 pt-3">
                             <p className="text-xs font-semibold text-slate-500 mb-2">Milestones:</p>
                             {habit.metadata.milestones.map((m: any) => (
-                              <label key={m.id} className="flex items-center gap-2 cursor-pointer group w-fit">
-                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${m.done ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300 group-hover:border-slate-400'}`}>
+                              <label key={m.id} className="flex items-start gap-2 cursor-pointer group max-w-full">
+                                <div className={`w-4 h-4 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${m.done ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300 group-hover:border-slate-400'}`}>
                                   {m.done && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                                 </div>
-                                <span className={`text-sm select-none ${m.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{m.title}</span>
+                                <span className={`text-sm select-none break-words flex-1 min-w-0 ${m.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{m.title}</span>
                                 <input
                                   type="checkbox"
                                   className="hidden"
@@ -477,8 +477,8 @@ export default function MyHabits() {
                     <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">Milestones</label>
                     <div className="space-y-2 mb-2">
                       {milestones.map((m, index) => (
-                        <div key={m.id} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 text-sm">
-                          <span className="truncate mr-2">{m.title}</span>
+                        <div key={m.id} className="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 text-sm gap-2">
+                          <span className="flex-1 min-w-0 break-words line-clamp-2">{m.title}</span>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <button type="button" onClick={() => moveMilestone(index, 'up')} disabled={index === 0} className="text-slate-400 hover:text-slate-600 disabled:opacity-30 p-1 text-xs transition-colors">▲</button>
                             <button type="button" onClick={() => moveMilestone(index, 'down')} disabled={index === milestones.length - 1} className="text-slate-400 hover:text-slate-600 disabled:opacity-30 p-1 text-xs transition-colors">▼</button>

@@ -199,7 +199,7 @@ export default function Reminders() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className={`font-semibold text-sm truncate ${reminder.enabled ? 'text-slate-800' : 'text-slate-400'}`}>
+                    <p className={`font-semibold text-sm break-words line-clamp-2 ${reminder.enabled ? 'text-slate-800' : 'text-slate-400'}`}>
                       {reminder.habit_title}
                     </p>
                     {reminder.timezone && (

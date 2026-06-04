@@ -173,14 +173,14 @@ export default function Diary() {
             ) : (
               activities.map(act => (
                 <div key={act.id} className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-200 text-slate-600 uppercase tracking-wider">
+                  <div className="flex flex-wrap items-start gap-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-200 text-slate-600 uppercase tracking-wider flex-shrink-0 mt-0.5">
                       {act.habitKind.replace('_', ' ')}
                     </span>
-                    <p className="font-semibold text-sm text-slate-800 leading-tight">{act.habitTitle}</p>
+                    <p className="font-semibold text-sm text-slate-800 leading-tight break-words flex-1 min-w-0">{act.habitTitle}</p>
                   </div>
                   {act.note && (
-                    <div className="mt-2 text-sm italic text-slate-600 bg-white/60 border border-slate-100 p-2.5 rounded-lg shadow-sm">
+                    <div className="mt-2 text-sm italic text-slate-600 bg-white/60 border border-slate-100 p-2.5 rounded-lg shadow-sm break-words">
                       "{act.note}"
                     </div>
                   )}

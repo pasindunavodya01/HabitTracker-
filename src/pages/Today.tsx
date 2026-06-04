@@ -50,7 +50,6 @@ export default function Today() {
   const [timetable, setTimetable] = useState<TimetableRow[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [expandedTimetableId, setExpandedTimetableId] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date()
     const year = today.getFullYear()
@@ -330,9 +329,9 @@ export default function Today() {
           )}
 
           {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`font-semibold text-sm leading-snug ${isCompleted && habit.kind !== 'goal' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+          <div className="flex-1 min-w-0 max-w-full">
+            <div className="flex items-start gap-2 flex-wrap">
+              <span className={`font-semibold text-sm leading-snug break-words max-w-full ${isCompleted && habit.kind !== 'goal' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
                 {habit.title}
               </span>
               <span
@@ -346,7 +345,7 @@ export default function Today() {
               </span>
             </div>
             {habit.description && (
-              <p className="mt-0.5 text-xs text-slate-400 truncate">{habit.description}</p>
+              <p className="mt-0.5 text-xs text-slate-400 line-clamp-2 break-words">{habit.description}</p>
             )}
           </div>
 
@@ -367,7 +366,10 @@ export default function Today() {
             {/* Render Existing Logs */}
             {completedLogs[habit.id]?.map((log) => (
               <div key={log.id} className="flex items-start justify-between gap-4 rounded-xl bg-emerald-50/70 p-3 border border-emerald-100">
-                <div className="text-sm text-emerald-800"><span className="font-semibold mr-1">Update:</span><span className="italic">"{log.note}"</span></div>
+                <div className="text-sm text-emerald-800 flex-1 min-w-0 break-words">
+                  <span className="font-semibold mr-1">Update:</span>
+                  <span className="italic">"{log.note}"</span>
+                </div>
                 <button onClick={() => handleRemoveGoalLog(habit.id, log.id)} disabled={saving} className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex-shrink-0 mt-0.5">Undo</button>
               </div>
             ))}
@@ -393,11 +395,11 @@ export default function Today() {
               <div className="mt-3 space-y-1.5 border-t border-slate-200/60 pt-3">
                 <p className="text-xs font-semibold text-slate-500 mb-2">Milestones:</p>
                 {habit.metadata.milestones.map((m: any) => (
-                  <label key={m.id} className="flex items-center gap-2 cursor-pointer group w-fit">
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${m.done ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300 group-hover:border-slate-400'}`}>
+                  <label key={m.id} className="flex items-start gap-2 cursor-pointer group max-w-full">
+                    <div className={`w-4 h-4 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${m.done ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-300 group-hover:border-slate-400'}`}>
                       {m.done && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                     </div>
-                    <span className={`text-sm select-none ${m.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{m.title}</span>
+                    <span className={`text-sm select-none break-words flex-1 min-w-0 ${m.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{m.title}</span>
                     <input
                       type="checkbox"
                       className="hidden"
@@ -522,8 +524,7 @@ export default function Today() {
                          <div className={`w-1.5 h-1.5 rounded-full z-10 ${isActive ? 'bg-blue-600' : 'bg-blue-400'}`} />
                        </div>
                        <div
-                         onClick={() => setExpandedTimetableId(expandedTimetableId === t.id ? null : t.id)}
-                         className={`font-semibold text-sm flex-1 cursor-pointer transition-all ${expandedTimetableId === t.id ? 'whitespace-normal break-words' : 'truncate'} ${isActive ? 'text-blue-900' : 'text-slate-800'}`}
+                         className={`font-semibold text-sm flex-1 break-words line-clamp-2 ${isActive ? 'text-blue-900' : 'text-slate-800'}`}
                        >
                          {t.activity}
                          {isActive && <span className="ml-2 inline-flex items-center rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 uppercase tracking-wider">Now</span>}
@@ -547,9 +548,9 @@ export default function Today() {
 
                   return (
                     <div key={project.id} style={{ borderLeft: '3px solid #f43f5e' }} className="rounded-2xl border border-slate-200/80 bg-white p-4 flex flex-col hover:border-slate-300 hover:shadow-sm transition-all">
-                      <div className="flex justify-between items-start gap-2 mb-3">
-                        <h4 className="font-semibold text-sm text-slate-800 leading-snug">{project.title}</h4>
-                        <span className="text-xs font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md">{progress}%</span>
+                      <div className="flex justify-between items-start gap-3 mb-3">
+                        <h4 className="font-semibold text-sm text-slate-800 leading-snug break-words flex-1 min-w-0">{project.title}</h4>
+                        <span className="text-xs font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md flex-shrink-0">{progress}%</span>
                       </div>
                       
                       <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden mb-3">
@@ -564,7 +565,7 @@ export default function Today() {
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Next Step</p>
-                            <p className="text-xs text-slate-700 font-medium truncate">{nextStep.title}</p>
+                            <p className="text-xs text-slate-700 font-medium line-clamp-2 break-words">{nextStep.title}</p>
                           </div>
                         </div>
                       ) : (
