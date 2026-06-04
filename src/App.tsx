@@ -104,13 +104,11 @@ type PageKey = (typeof pages)[number]['key']
 
 function SidebarNav({ activePage, onNavigate }: { activePage: PageKey; onNavigate: (page: PageKey) => void }) {
   return (
-    <aside className="hidden lg:flex flex-col w-56 xl:w-64 min-h-screen bg-[#0f1117] text-white border-r border-white/5 px-4 py-6 sticky top-0">
+    <aside className="hidden lg:flex flex-col w-56 xl:w-64 min-h-screen bg-emerald-600 text-white border-r border-white/5 px-4 py-6 sticky top-0">
       <div className="px-2 mb-10">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+          <div className="w-7 h-7 rounded-lg overflow-hidden bg-transparent shadow-none">
+            <img src="/icon-512.png" alt="LifeOS" className="w-full h-full object-cover" />
           </div>
           <div>
             <span className="text-sm font-bold tracking-tight">LifeOS</span>
@@ -155,15 +153,18 @@ function SidebarNav({ activePage, onNavigate }: { activePage: PageKey; onNavigat
 
 function BottomTabBar({ activePage, onNavigate }: { activePage: PageKey; onNavigate: (page: PageKey) => void }) {
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
-      <div className="flex items-stretch">
+    <nav
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]"
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)' }}
+    >
+      <div className="flex items-stretch min-h-[64px]">
         {pages.map(({ key, shortLabel, icon: Icon }) => {
           const active = activePage === key
           return (
             <button
               key={key}
               onClick={() => onNavigate(key)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-3 transition-colors ${
                 active ? 'text-emerald-600' : 'text-slate-400'
               }`}
             >
@@ -189,10 +190,8 @@ function TopHeader({ userEmail, onSignOut }: { userEmail: string; onSignOut: () 
     <header className="lg:hidden sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-slate-100 px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow shadow-emerald-200">
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
+          <div className="w-7 h-7 rounded-lg overflow-hidden bg-transparent shadow-none flex items-center justify-center">
+            <img src="/icon-512.png" alt="LifeOS" className="w-full h-full object-cover" />
           </div>
           <span className="text-sm font-bold text-slate-800 tracking-tight">LifeOS</span>
         </div>
@@ -261,12 +260,10 @@ function LandingPage() {
       </div>
 
       <div className="w-full lg:w-[460px] xl:w-[520px] bg-white flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-14 border-t lg:border-t-0 lg:border-l border-slate-100 shadow-[-8px_0_40px_rgba(0,0,0,0.03)]">
-        <div className="lg:hidden text-center mb-8">
+        <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow shadow-emerald-200">
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
+            <div className="w-8 h-8 rounded-xl overflow-hidden bg-transparent shadow-none flex items-center justify-center">
+              <img src="/icon-512.png" alt="LifeOS" className="w-full h-full object-cover" />
             </div>
             <div className="text-left">
               <p className="text-base font-extrabold tracking-tight text-slate-900">LifeOS</p>
