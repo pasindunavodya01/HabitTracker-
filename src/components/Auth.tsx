@@ -105,7 +105,7 @@ export default function Auth() {
 
   if (session?.user) {
     return (
-      <div className="p-4 rounded border bg-white">
+      <div className="space-y-4">
         <div className="text-sm">Signed in as <strong>{session.user.email}</strong></div>
         <div className="mt-2 flex gap-2">
           <button onClick={handleSignOut} className="px-3 py-1 bg-red-500 text-white rounded">Sign out</button>
@@ -115,7 +115,7 @@ export default function Auth() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 rounded border bg-white space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="flex gap-2">
         <button
           type="button"
