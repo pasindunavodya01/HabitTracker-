@@ -526,14 +526,19 @@ export default function Today() {
             <h2 className="mt-1 text-2xl font-bold text-slate-900">{getRelativeDayName()}</h2>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={() => navigateDay(-1)} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors text-slate-600">◀</button>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 cursor-pointer"
-            />
-            <button onClick={() => navigateDay(1)} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors text-slate-600">▶</button>
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl">
+            <button onClick={() => navigateDay(-1)} className="p-2 rounded-xl hover:bg-white hover:shadow-sm transition-all text-slate-500 hover:text-slate-700 text-sm">◀</button>
+            <div className="relative flex items-center justify-center">
+              <button className="p-2 rounded-xl hover:bg-white hover:shadow-sm transition-all text-slate-500 hover:text-slate-700 text-sm" title="Choose date">📅</button>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            </div>
+            <button onClick={() => navigateDay(1)} className="p-2 rounded-xl hover:bg-white hover:shadow-sm transition-all text-slate-500 hover:text-slate-700 text-sm">▶</button>
+          </div>
             {!isToday && (
               <button onClick={() => setSelectedDate(todayLocalStr)} className="ml-1 text-xs font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider transition-colors">
                 Today
