@@ -19,6 +19,7 @@ function IconToday() {
     </svg>
   )
 }
+
 function IconDiary() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -28,6 +29,7 @@ function IconDiary() {
     </svg>
   )
 }
+
 function IconTimetable() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -36,6 +38,7 @@ function IconTimetable() {
     </svg>
   )
 }
+
 function IconHabits() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -44,6 +47,7 @@ function IconHabits() {
     </svg>
   )
 }
+
 function IconProjects() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -52,6 +56,7 @@ function IconProjects() {
     </svg>
   )
 }
+
 function IconProgress() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -59,6 +64,7 @@ function IconProgress() {
     </svg>
   )
 }
+
 function IconSignOut() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -69,15 +75,27 @@ function IconSignOut() {
   )
 }
 
+// ─── Brand Text ───────────────────────────────────────────────────────────────
+
+function EcoMindBrand({ dark = false }: { dark?: boolean }) {
+  return (
+    <span className="font-semibold tracking-tight">
+      <span className={dark ? 'text-white/30' : 'text-slate-400'}>by </span>
+      <span className={dark ? 'text-emerald-400' : 'text-emerald-500'}>Eco</span>
+      <span className={dark ? 'text-white/60' : 'text-slate-600'}>Mind</span>
+    </span>
+  )
+}
+
 // ─── Page Config ──────────────────────────────────────────────────────────────
 
 const pages = [
-  { key: 'today',     label: 'Today',     shortLabel: 'Today',    icon: IconToday,     component: <Today /> },
-  { key: 'diary',     label: 'Diary',     shortLabel: 'Diary',    icon: IconDiary,     component: <Diary /> },
+  { key: 'today', label: 'Today', shortLabel: 'Today', icon: IconToday, component: <Today /> },
+  { key: 'diary', label: 'Diary', shortLabel: 'Diary', icon: IconDiary, component: <Diary /> },
   { key: 'timetable', label: 'Timetable', shortLabel: 'Schedule', icon: IconTimetable, component: <Timetable /> },
-  { key: 'habits',    label: 'My Items',  shortLabel: 'Items',    icon: IconHabits,    component: <MyHabits /> },
-  { key: 'projects',  label: 'Plans',     shortLabel: 'Plans',    icon: IconProjects,  component: <Projects /> },
-  { key: 'progress',  label: 'Analytics', shortLabel: 'Stats',    icon: IconProgress,  component: <Progress /> },
+  { key: 'habits', label: 'My Items', shortLabel: 'Items', icon: IconHabits, component: <MyHabits /> },
+  { key: 'projects', label: 'Plans', shortLabel: 'Plans', icon: IconProjects, component: <Projects /> },
+  { key: 'progress', label: 'Analytics', shortLabel: 'Stats', icon: IconProgress, component: <Progress /> },
 ] as const
 
 type PageKey = (typeof pages)[number]['key']
@@ -87,20 +105,22 @@ type PageKey = (typeof pages)[number]['key']
 function SidebarNav({ activePage, onNavigate }: { activePage: PageKey; onNavigate: (page: PageKey) => void }) {
   return (
     <aside className="hidden lg:flex flex-col w-56 xl:w-64 min-h-screen bg-[#0f1117] text-white border-r border-white/5 px-4 py-6 sticky top-0">
-      {/* Logo */}
       <div className="px-2 mb-10">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </div>
           <div>
             <span className="text-sm font-bold tracking-tight">LifeOS</span>
-            <span className="block text-[10px] text-white/30 font-medium tracking-widest uppercase">by EcoMind</span>
+            <span className="block text-[11px]">
+              <EcoMindBrand dark />
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Nav Items */}
       <nav className="flex-1 flex flex-col gap-1">
         {pages.map(({ key, label, icon: Icon }) => {
           const active = activePage === key
@@ -118,13 +138,12 @@ function SidebarNav({ activePage, onNavigate }: { activePage: PageKey; onNavigat
                 <Icon />
               </span>
               {label}
-              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400"></span>}
+              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400" />}
             </button>
           )
         })}
       </nav>
 
-      {/* Divider */}
       <div className="border-t border-white/5 pt-4 mt-4">
         <div className="text-[10px] text-white/20 font-semibold tracking-widest uppercase px-2">Session active</div>
       </div>
@@ -163,7 +182,7 @@ function BottomTabBar({ activePage, onNavigate }: { activePage: PageKey; onNavig
   )
 }
 
-// ─── Top Header (mobile/tablet) ───────────────────────────────────────────────
+// ─── Top Header ───────────────────────────────────────────────────────────────
 
 function TopHeader({ userEmail, onSignOut }: { userEmail: string; onSignOut: () => void }) {
   return (
@@ -172,11 +191,12 @@ function TopHeader({ userEmail, onSignOut }: { userEmail: string; onSignOut: () 
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow shadow-emerald-200">
             <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
           </div>
           <span className="text-sm font-bold text-slate-800 tracking-tight">LifeOS</span>
         </div>
+
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500 truncate max-w-[140px]">{userEmail}</span>
           <button
@@ -196,16 +216,13 @@ function TopHeader({ userEmail, onSignOut }: { userEmail: string; onSignOut: () 
 function LandingPage() {
   return (
     <div className="min-h-screen bg-[#fafaf9] flex flex-col lg:flex-row font-sans text-slate-900">
-      {/* Hero */}
       <div className="flex-1 flex flex-col justify-center px-6 py-14 sm:px-10 lg:px-16 xl:px-24 relative overflow-hidden">
-        {/* Decorative blobs */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute -top-32 -left-16 w-[500px] h-[500px] rounded-full bg-emerald-100/50 blur-3xl" />
           <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-teal-50/80 blur-3xl" />
         </div>
 
         <div className="relative z-10 max-w-lg mx-auto lg:mx-0">
-          {/* Badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold tracking-widest uppercase mb-8 shadow-sm">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -228,8 +245,8 @@ function LandingPage() {
           <ul className="space-y-4 mb-12">
             {[
               { title: 'End Procrastination', desc: 'Clear workflows eliminate decision fatigue before it starts.' },
-              { title: 'Visual Momentum',     desc: 'Leverage the Zeigarnik effect — incomplete streaks demand completion.' },
-              { title: 'Compound Mastery',    desc: 'Turn 1 % daily improvements into life-changing results.' },
+              { title: 'Visual Momentum', desc: 'Leverage the Zeigarnik effect — incomplete streaks demand completion.' },
+              { title: 'Compound Mastery', desc: 'Turn 1% daily improvements into life-changing results.' },
             ].map(({ title, desc }) => (
               <li key={title} className="flex items-start gap-3.5">
                 <span className="mt-0.5 w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span>
@@ -240,27 +257,22 @@ function LandingPage() {
               </li>
             ))}
           </ul>
-
-          <p className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
-            <span className="w-6 h-px bg-slate-200" />
-            LifeOS · <span className="text-emerald-500 ml-1">Eco</span><span className="text-slate-600">Mind</span>
-          </p>
         </div>
       </div>
 
-      {/* Auth Panel */}
       <div className="w-full lg:w-[460px] xl:w-[520px] bg-white flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-14 border-t lg:border-t-0 lg:border-l border-slate-100 shadow-[-8px_0_40px_rgba(0,0,0,0.03)]">
-        {/* Mobile logo */}
         <div className="lg:hidden text-center mb-8">
           <div className="inline-flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow shadow-emerald-200">
               <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
               </svg>
             </div>
             <div className="text-left">
               <p className="text-base font-extrabold tracking-tight text-slate-900">LifeOS</p>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">by EcoMind</p>
+              <p className="text-[10px]">
+                <EcoMindBrand />
+              </p>
             </div>
           </div>
         </div>
@@ -271,7 +283,6 @@ function LandingPage() {
             <p className="text-sm text-slate-400 mt-1">Create a free account or sign in to continue.</p>
           </div>
 
-          {/* Auth card */}
           <div className="bg-[#fafaf9] rounded-2xl border border-slate-100 p-6 shadow-sm">
             <Auth />
           </div>
@@ -315,22 +326,21 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-[#f6f7f9] text-slate-900 font-sans flex">
-      {/* Desktop sidebar */}
       <SidebarNav activePage={page} onNavigate={setPage} />
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile top header */}
         <TopHeader userEmail={user.email ?? ''} onSignOut={handleSignOut} />
 
-        {/* Desktop top bar */}
         <div className="hidden lg:flex items-center justify-between px-8 py-5 border-b border-slate-200/60 bg-white/60 backdrop-blur-sm">
           <div>
             <h1 className="text-xl font-bold text-slate-800 tracking-tight">
               {pages.find((p) => p.key === page)?.label ?? 'Today'}
             </h1>
-            <p className="text-xs text-slate-400 mt-0.5">A daily growth workflow for habits, routines, and progress</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              A daily growth workflow for habits, routines, and progress
+            </p>
           </div>
+
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-400 border border-slate-200 rounded-full px-3 py-1.5 bg-white truncate max-w-[220px]">
               {user.email}
@@ -345,7 +355,6 @@ function AppContent() {
           </div>
         </div>
 
-        {/* Page content */}
         <main className="flex-1 px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8 pb-24 lg:pb-8 overflow-y-auto">
           <div className="max-w-3xl mx-auto">
             {pageElement}
@@ -353,7 +362,6 @@ function AppContent() {
         </main>
       </div>
 
-      {/* Mobile bottom tabs */}
       <BottomTabBar activePage={page} onNavigate={setPage} />
     </div>
   )
@@ -368,3 +376,4 @@ export default function App() {
     </AuthProvider>
   )
 }
+
