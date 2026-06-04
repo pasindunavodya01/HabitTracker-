@@ -24,6 +24,7 @@ export default function Diary() {
 
   const [activities, setActivities] = useState<CompletedActivity[]>([])
   const [journalContent, setJournalContent] = useState('')
+  const [savedJournalContent, setSavedJournalContent] = useState('')
   const [journalId, setJournalId] = useState<string | null>(null)
 
   const [loading, setLoading] = useState(false)
@@ -68,9 +69,11 @@ export default function Diary() {
 
       if (journalRes.data) {
         setJournalContent(journalRes.data.content)
+        setSavedJournalContent(journalRes.data.content)
         setJournalId(journalRes.data.id)
       } else {
         setJournalContent('')
+        setSavedJournalContent('')
         setJournalId(null)
       }
 
@@ -82,6 +85,7 @@ export default function Diary() {
   const handleSaveJournal = async () => {
     if (!user) return
     if (!journalId && !journalContent.trim()) return // Don't save empty entries
+    if (journalContent === savedJournalContent) return // Skip if no changes
     setSavingJournal(true)
     if (journalId) {
       await supabase
@@ -122,6 +126,9 @@ export default function Diary() {
     )
   }
 
+  const hasChanges = journalContent !== savedJournalContent
+  const isSaved = !hasChanges && (!!journalId || journalContent.trim() !== '')
+
   return (
     <section className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
@@ -156,10 +163,12 @@ export default function Diary() {
           <div className="mt-4 flex justify-end">
             <button
               onClick={handleSaveJournal}
-              disabled={savingJournal}
-              className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              disabled={savingJournal || !hasChanges}
+              className={`rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50 transition-colors ${
+                isSaved ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              {savingJournal ? 'Saving...' : 'Save Notes'}
+              {savingJournal ? 'Saving...' : isSaved ? 'All changes saved ✓' : 'Save Notes'}
             </button>
           </div>
         </div>

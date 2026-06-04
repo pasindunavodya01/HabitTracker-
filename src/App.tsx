@@ -72,17 +72,17 @@ function AppContent() {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <Nav activePage={page} onNavigate={setPage} />
       <main className="max-w-5xl mx-auto p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">LifeOS</h1>
-            <p className="mt-2 text-gray-600">A simple daily growth workflow for habits, routines, and progress.</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">LifeOS</h1>
+            <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">A simple daily growth workflow for habits, routines, and progress.</p>
           </div>
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="inline-flex rounded-full border bg-white px-4 py-2 text-sm text-slate-700 break-all">{user.email}</div>
+          <div className="w-full md:w-auto">
+            <div className="flex items-center justify-between md:justify-end gap-2 sm:gap-3">
+              <div className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm text-slate-600 truncate flex-1 md:flex-initial justify-center md:justify-start max-w-[200px] md:max-w-xs" title={user.email}>{user.email}</div>
               <button
                 onClick={handleSignOut}
-                className="whitespace-nowrap rounded border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors flex-shrink-0"
               >
                 Sign out
               </button>
@@ -90,7 +90,7 @@ function AppContent() {
           </div>
         </div>
 
-        <div className="mt-8">{pageElement}</div>
+        <div className="mt-6 sm:mt-8">{pageElement}</div>
       </main>
     </div>
   )

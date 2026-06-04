@@ -485,8 +485,20 @@ export default function Today() {
         </div>
       ) : (
         <>
+          {/* Motivation */}
+          <div className="rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Motivation</p>
+            <p className="mt-2 font-semibold text-slate-700">
+              {completedCount === 0
+                ? (isToday ? 'Start small — one completion builds momentum.' : 'No items completed on this day.')
+                : completedCount === totalCount
+                ? 'Excellent! You crushed every item! 🎉'
+                : `${completedCount} down, ${totalCount - completedCount} to go — keep it up!`}
+            </p>
+          </div>
+
           {timetable.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-2 mt-6">
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Daily Schedule</h3>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-100 px-2 py-0.5 rounded flex items-center gap-1.5 shadow-sm">
@@ -587,18 +599,6 @@ export default function Today() {
                 <div className="space-y-2">{items.map(renderCard)}</div>
               </div>
             ))}
-          </div>
-
-          {/* Motivation footer */}
-          <div className="rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Motivation</p>
-            <p className="mt-2 font-semibold text-slate-700">
-              {completedCount === 0
-                ? (isToday ? 'Start small — one completion builds momentum.' : 'No items completed on this day.')
-                : completedCount === totalCount
-                ? 'Excellent! You crushed every item! 🎉'
-                : `${completedCount} down, ${totalCount - completedCount} to go — keep it up!`}
-            </p>
           </div>
         </>
       )}
