@@ -104,16 +104,16 @@ type PageKey = (typeof pages)[number]['key']
 
 function SidebarNav({ activePage, onNavigate }: { activePage: PageKey; onNavigate: (page: PageKey) => void }) {
   return (
-    <aside className="hidden lg:flex flex-col w-56 xl:w-64 min-h-screen bg-emerald-600 text-white border-r border-white/5 px-4 py-6 sticky top-0">
+    <aside className="hidden lg:flex flex-col w-56 xl:w-64 min-h-screen bg-white border-r border-slate-200/60 px-4 py-6 sticky top-0">
       <div className="px-2 mb-10">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg overflow-hidden bg-transparent shadow-none">
             <img src="/icon-512.png" alt="LifeOS" className="w-full h-full object-cover" />
           </div>
           <div>
-            <span className="text-sm font-bold tracking-tight">LifeOS</span>
+            <span className="text-sm font-bold tracking-tight text-slate-800">LifeOS</span>
             <span className="block text-[11px]">
-              <EcoMindBrand dark />
+              <EcoMindBrand />
             </span>
           </div>
         </div>
@@ -128,22 +128,22 @@ function SidebarNav({ activePage, onNavigate }: { activePage: PageKey; onNavigat
               onClick={() => onNavigate(key)}
               className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                 active
-                  ? 'bg-emerald-500/10 text-emerald-400'
-                  : 'text-white/40 hover:text-white/80 hover:bg-white/5'
+                  ? 'bg-emerald-50 text-emerald-600'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
               }`}
             >
-              <span className={`transition-colors ${active ? 'text-emerald-400' : 'text-white/30 group-hover:text-white/60'}`}>
+              <span className={`transition-colors ${active ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-600'}`}>
                 <Icon />
               </span>
               {label}
-              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-600" />}
             </button>
           )
         })}
       </nav>
 
-      <div className="border-t border-white/5 pt-4 mt-4">
-        <div className="text-[10px] text-white/20 font-semibold tracking-widest uppercase px-2">Session active</div>
+      <div className="border-t border-slate-200/60 pt-4 mt-4">
+        <div className="text-[10px] text-slate-400 font-semibold tracking-widest uppercase px-2">Session active</div>
       </div>
     </aside>
   )
