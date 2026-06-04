@@ -13,5 +13,5 @@
     "baseUrl": "./",
     "ignoreDeprecations": "6.0"
   },
-  "include": ["src"]
+  "include": ["src", "public/sw.js"]
 }
