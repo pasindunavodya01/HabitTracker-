@@ -2,6 +2,41 @@ import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
+function Celebration() {
+  const [particles, setParticles] = useState<{ id: number, left: string, delay: string, duration: string, emoji: string, size: string }[]>([])
+  
+  useEffect(() => {
+    const emojis = ['🎉', '✨', '🎊', '⭐', '🏆']
+    const newParticles = Array.from({ length: 60 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}vw`,
+      delay: `${Math.random() * 0.5}s`,
+      duration: `${Math.random() * 2 + 2}s`,
+      emoji: emojis[Math.floor(Math.random() * emojis.length)],
+      size: `${Math.random() * 1 + 1}rem`
+    }))
+    setParticles(newParticles)
+  }, [])
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden">
+      <style>{`
+        @keyframes celebrate-fall {
+          0% { transform: translateY(-10vh) rotate(0deg) scale(0.5); opacity: 1; }
+          50% { opacity: 1; }
+          100% { transform: translateY(100vh) rotate(720deg) scale(1.2); opacity: 0; }
+        }
+        .animate-celebrate {
+          animation: celebrate-fall linear forwards;
+        }
+      `}</style>
+      {particles.map(p => (
+        <div key={p.id} className="absolute top-[-10vh] animate-celebrate" style={{ left: p.left, animationDelay: p.delay, animationDuration: p.duration, fontSize: p.size }}>{p.emoji}</div>
+      ))}
+    </div>
+  )
+}
+
 type ProjectStep = {
   id: string
   title: string
@@ -14,6 +49,7 @@ type Project = {
   description: string | null
   target_date: string | null
   steps: ProjectStep[]
+  is_archived: boolean
 }
 
 export default function Projects() {
@@ -32,6 +68,8 @@ export default function Projects() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const stepInputRef = useRef<HTMLInputElement>(null)
+  const [showArchived, setShowArchived] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -41,12 +79,13 @@ export default function Projects() {
         .from('projects')
         .select('*')
         .eq('user_id', user?.id)
+        .eq('is_archived', showArchived)
         .order('created_at', { ascending: false })
       setProjects(data ?? [])
       setLoading(false)
     }
     load()
-  }, [user])
+  }, [user, showArchived])
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,7 +97,8 @@ export default function Projects() {
       title: title.trim(),
       description: description.trim() || null,
       target_date: targetDate || null,
-      steps
+      steps,
+      is_archived: false,
     }
 
     if (editingId) {
@@ -103,6 +143,29 @@ export default function Projects() {
     const newSteps = project.steps.map(s => s.id === stepId ? { ...s, is_completed: !s.is_completed } : s)
     setProjects(c => c.map(p => p.id === projectId ? { ...p, steps: newSteps } : p))
     await supabase.from('projects').update({ steps: newSteps }).eq('id', projectId)
+  }
+
+  const handleCompletePlan = async (projectId: string) => {
+    if (!user) return
+    const { error } = await supabase
+        .from('projects')
+        .update({ is_archived: true })
+        .eq('id', projectId)
+    
+    if (!error) {
+        setShowConfetti(true)
+        setTimeout(() => setShowConfetti(false), 4000)
+        setProjects(c => c.filter(p => p.id !== projectId))
+    }
+  }
+
+  const handleRestorePlan = async (projectId: string) => {
+    if (!user) return
+    const { error } = await supabase
+        .from('projects')
+        .update({ is_archived: false })
+        .eq('id', projectId)
+    if (!error) setProjects(c => c.filter(p => p.id !== projectId))
   }
 
   const handleEdit = (project: Project) => {
@@ -152,6 +215,7 @@ export default function Projects() {
 
   return (
     <section className="space-y-6 max-w-4xl mx-auto">
+      {showConfetti && <Celebration />}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-2xl font-bold text-slate-900">Plans</h2>
         <p className="mt-1 text-sm text-slate-400">Plan big things by dividing them into smaller, manageable parts.</p>
@@ -160,7 +224,20 @@ export default function Projects() {
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         {/* List */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="font-bold text-slate-800 mb-5">Your Plans</h3>
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-bold text-slate-800">{showArchived ? 'Archived' : 'Your'} Plans</h3>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <div
+                onClick={() => setShowArchived((v) => !v)}
+                className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${showArchived ? 'bg-blue-500' : 'bg-slate-200'}`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${showArchived ? 'translate-x-4' : ''}`}
+                />
+              </div>
+              <span className="text-xs font-medium text-slate-500">Archived</span>
+            </label>
+          </div>
           {loading ? (
             <div className="flex justify-center text-slate-400 py-8">Loading...</div>
           ) : projects.length === 0 ? (
@@ -200,6 +277,17 @@ export default function Projects() {
                         </div>
                       </div>
                     </div>
+
+                    {isAllDone && !showArchived && (
+                      <div className="p-4 pt-0">
+                        <button
+                            onClick={() => handleCompletePlan(project.id)}
+                            className="w-full rounded-xl bg-purple-100 px-4 py-2 text-sm font-bold text-purple-700 hover:bg-purple-200 transition-colors flex items-center gap-2 justify-center"
+                        >
+                            <span>🏆</span> Complete Plan
+                        </button>
+                      </div>
+                    )}
                     
                     {isExpanded && (
                       <div className="p-4">
@@ -232,7 +320,11 @@ export default function Projects() {
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
-                              <button onClick={() => handleEdit(project)} className="text-xs font-semibold text-slate-500 hover:text-blue-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-blue-200">Edit Project</button>
+                              {showArchived ? (
+                                <button onClick={() => handleRestorePlan(project.id)} className="text-xs font-semibold text-slate-500 hover:text-blue-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-blue-200">Restore</button>
+                              ) : (
+                                <button onClick={() => handleEdit(project)} className="text-xs font-semibold text-slate-500 hover:text-blue-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-blue-200">Edit</button>
+                              )}
                               <button onClick={() => setDeletingId(project.id)} className="text-xs font-semibold text-slate-500 hover:text-red-600 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-red-200">Delete</button>
                             </div>
                           )}

@@ -88,6 +88,7 @@ create table if not exists projects (
   description text,
   target_date text,
   steps jsonb not null default '[]'::jsonb,
+  is_archived boolean not null default false,
   created_at timestamptz default now()
 );
 

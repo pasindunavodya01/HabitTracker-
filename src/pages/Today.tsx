@@ -38,6 +38,53 @@ type Project = {
   description: string | null
   target_date: string | null
   steps: ProjectStep[]
+  is_archived: boolean
+}
+
+function Celebration() {
+  const [particles, setParticles] = useState<{ id: number, left: string, delay: string, duration: string, emoji: string, size: string }[]>([])
+  
+  useEffect(() => {
+    const emojis = ['🎉', '✨', '🎊', '⭐', '🏆']
+    const newParticles = Array.from({ length: 60 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}vw`,
+      delay: `${Math.random() * 0.5}s`,
+      duration: `${Math.random() * 2 + 2}s`,
+      emoji: emojis[Math.floor(Math.random() * emojis.length)],
+      size: `${Math.random() * 1 + 1}rem`
+    }))
+    setParticles(newParticles)
+  }, [])
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden">
+      <style>{`
+        @keyframes celebrate-fall {
+          0% { transform: translateY(-10vh) rotate(0deg) scale(0.5); opacity: 1; }
+          50% { opacity: 1; }
+          100% { transform: translateY(100vh) rotate(720deg) scale(1.2); opacity: 0; }
+        }
+        .animate-celebrate {
+          animation: celebrate-fall linear forwards;
+        }
+      `}</style>
+      {particles.map(p => (
+        <div
+          key={p.id}
+          className="absolute top-[-10vh] animate-celebrate"
+          style={{ 
+            left: p.left, 
+            animationDelay: p.delay,
+            animationDuration: p.duration,
+            fontSize: p.size
+          }}
+        >
+          {p.emoji}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export default function Today() {
@@ -50,6 +97,7 @@ export default function Today() {
   const [timetable, setTimetable] = useState<TimetableRow[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [showConfetti, setShowConfetti] = useState(false)
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date()
     const year = today.getFullYear()
@@ -95,6 +143,7 @@ export default function Today() {
           .from('projects')
           .select('*')
           .eq('user_id', user?.id)
+          .eq('is_archived', false)
       ])
 
       const filteredHabits = (habitsData ?? [])
@@ -239,6 +288,43 @@ export default function Today() {
     const newSteps = project.steps.map(s => s.id === stepId ? { ...s, is_completed: !s.is_completed } : s)
     setProjects(c => c.map(p => p.id === projectId ? { ...p, steps: newSteps } : p))
     await supabase.from('projects').update({ steps: newSteps }).eq('id', projectId)
+  }
+
+  const handleUndoLastProjectStep = async (projectId: string) => {
+    const project = projects.find(p => p.id === projectId)
+    if (!project) return
+    const lastCompleted = [...project.steps].reverse().find(s => s.is_completed)
+    if (lastCompleted) {
+      handleToggleProjectStep(projectId, lastCompleted.id)
+    }
+  }
+
+  const handleCompletePlan = async (projectId: string) => {
+    if (!user) return
+    const { error } = await supabase
+        .from('projects')
+        .update({ is_archived: true })
+        .eq('id', projectId)
+    
+    if (!error) {
+        setShowConfetti(true)
+        setTimeout(() => setShowConfetti(false), 4000)
+        setProjects(c => c.filter(p => p.id !== projectId))
+    }
+  }
+
+  const handleFinishGoal = async (habitId: string) => {
+    if (!user) return
+    setSavingHabitIds((c) => new Set(c).add(habitId))
+    
+    const { error } = await supabase.from('habits').update({ is_archived: true }).eq('id', habitId)
+    
+    if (!error) {
+      setShowConfetti(true)
+      setTimeout(() => setShowConfetti(false), 4000)
+      setHabits((c) => c.filter(h => h.id !== habitId))
+    }
+    setSavingHabitIds((c) => { const n = new Set(c); n.delete(habitId); return n })
   }
 
   const summaryText = useMemo(() => {
@@ -410,21 +496,28 @@ export default function Today() {
                 ))}
               </div>
             )}
+            
+            {/* Finish Goal Action */}
+            <div className="pt-3 mt-4 border-t border-slate-200/60 flex justify-end">
+              <button
+                onClick={() => handleFinishGoal(habit.id)}
+                disabled={saving}
+                className="rounded-xl bg-purple-100 px-4 py-2 text-sm font-bold text-purple-700 hover:bg-purple-200 transition-colors flex items-center gap-2"
+              >
+                <span>🏆</span> Finish Goal
+              </button>
+            </div>
           </div>
         )}
       </div>
     )
   }
 
-  const activeProjects = projects.filter((p) => {
-    const total = p.steps.length
-    if (total === 0) return true // Show empty plans so users remember to add steps
-    const completed = p.steps.filter((s) => s.is_completed).length
-    return completed < total // Only show if not 100% finished
-  })
+  const activeProjects = projects
 
   return (
     <section className="space-y-6 max-w-2xl mx-auto">
+      {showConfetti && <Celebration />}
       {/* Header */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
@@ -556,27 +649,53 @@ export default function Today() {
                   const totalSteps = project.steps.length
                   const completedSteps = project.steps.filter(s => s.is_completed).length
                   const progress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0
+                  const isAllDone = totalSteps > 0 && progress === 100
                   const nextStep = project.steps.find(s => !s.is_completed)
 
                   return (
-                    <div key={project.id} style={{ borderLeft: '3px solid #f43f5e' }} className="rounded-2xl border border-slate-200/80 bg-white p-4 flex flex-col hover:border-slate-300 hover:shadow-sm transition-all">
+                    <div key={project.id} style={{ borderLeft: `3px solid ${isAllDone ? '#10b981' : '#f43f5e'}` }} className={`rounded-2xl border ${isAllDone ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200/80 bg-white'} p-4 flex flex-col hover:border-slate-300 hover:shadow-sm transition-all`}>
                       <div className="flex justify-between items-start gap-3 mb-3">
-                        <h4 className="font-semibold text-sm text-slate-800 leading-snug break-words flex-1 min-w-0">{project.title}</h4>
-                        <span className="text-xs font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md flex-shrink-0">{progress}%</span>
+                        <h4 className={`font-semibold text-sm leading-snug break-words flex-1 min-w-0 ${isAllDone ? 'text-emerald-800' : 'text-slate-800'}`}>{project.title}</h4>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-md flex-shrink-0 ${isAllDone ? 'text-emerald-600 bg-emerald-100' : 'text-rose-500 bg-rose-50'}`}>{progress}%</span>
                       </div>
                       
                       <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden mb-3">
-                        <div className="h-full bg-rose-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+                        <div className={`h-full transition-all duration-300 ${isAllDone ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${progress}%` }} />
                       </div>
                       
-                      {nextStep ? (
+                      {isAllDone ? (
+                        <div className="mt-auto">
+                          <button
+                            onClick={() => handleCompletePlan(project.id)}
+                            className="w-full rounded-xl bg-purple-100 px-4 py-2 text-sm font-bold text-purple-700 hover:bg-purple-200 transition-colors flex items-center gap-2 justify-center"
+                          >
+                            <span>🏆</span> Complete Plan
+                          </button>
+                          <button
+                            onClick={() => handleUndoLastProjectStep(project.id)}
+                            className="w-full mt-2 text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors"
+                          >
+                            Undo last step
+                          </button>
+                        </div>
+                      ) : nextStep ? (
                         <div className="mt-auto flex items-start gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                           <button
                             onClick={() => handleToggleProjectStep(project.id, nextStep.id)}
                             className="w-4 h-4 mt-0.5 rounded border-2 border-slate-300 bg-white hover:border-rose-400 flex-shrink-0 flex items-center justify-center transition-colors"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Next Step</p>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Next Step</p>
+                              {completedSteps > 0 && (
+                                <button
+                                  onClick={() => handleUndoLastProjectStep(project.id)}
+                                  className="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider transition-colors"
+                                >
+                                  Undo
+                                </button>
+                              )}
+                            </div>
                             <p className="text-xs text-slate-700 font-medium line-clamp-2 break-words">{nextStep.title}</p>
                           </div>
                         </div>
