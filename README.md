@@ -11,7 +11,6 @@ LifeOS is a comprehensive personal growth application designed to help you build
 - **Diary**: Reflect on your day, write journal entries, and view a history of your completed activities.
 - **Timetable**: Schedule your daily activities and view what's currently happening right on your dashboard.
 - **Progress & Analytics**: Visualize your consistency, track your streaks, and analyze your productivity trends over time with interactive charts.
-- **Reminders**: Schedule browser notifications to ensure you never miss a daily check-in.
 - **Secure Authentication**: User accounts and data syncing powered by Supabase.
 
 ## 🛠️ Tech Stack

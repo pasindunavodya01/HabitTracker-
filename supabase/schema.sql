@@ -48,19 +48,6 @@ create table if not exists completions (
   created_at timestamptz default now()
 );
 
--- Reminders (simple structure for scheduling push/email reminders)
-create table if not exists reminders (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete cascade,
-  habit_id uuid references habits(id),
-  -- store cron, rrule, or simple time-of-day
-  schedule text,
-  timezone text,
-  enabled boolean default true,
-  channel text default 'email',
-  created_at timestamptz default now()
-);
-
 -- Simple achievements / badges
 create table if not exists achievements (
   id uuid primary key default gen_random_uuid(),

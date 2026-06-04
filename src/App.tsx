@@ -2,12 +2,9 @@ import React, { useMemo, useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
-import ReminderScheduler from './components/ReminderScheduler'
 import Today from './pages/Today'
 import MyHabits from './pages/MyHabits'
 import Progress from './pages/Progress'
-import Analytics from './pages/Analytics'
-import Reminders from './pages/Reminders'
 import Diary from './pages/Diary'
 import Timetable from './pages/Timetable'
 import Projects from './pages/Projects'
@@ -18,10 +15,7 @@ const pages = [
   { key: 'timetable', label: 'Timetable', component: <Timetable /> },
   { key: 'habits', label: 'My Items', component: <MyHabits /> },
   { key: 'projects', label: 'Plans', component: <Projects /> },
-  { key: 'progress', label: 'Progress', component: <Progress /> },
-  { key: 'analytics', label: 'Analytics', component: <Analytics /> },
-  { key: 'reminders', label: 'Reminders', component: <Reminders /> },
- 
+  { key: 'progress', label: 'Analytics', component: <Progress /> },
 ] as const
 
 type PageKey = (typeof pages)[number]['key']
@@ -98,7 +92,6 @@ function AppContent() {
 
         <div className="mt-8">{pageElement}</div>
       </main>
-      <ReminderScheduler />
     </div>
   )
 }
