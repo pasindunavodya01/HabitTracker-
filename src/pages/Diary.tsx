@@ -42,7 +42,7 @@ export default function Diary() {
       const [completionsRes, journalRes] = await Promise.all([
         supabase
           .from('completions')
-          .select('id, habit_id, note, completed_at, habits (title, kind, description)')
+          .select('id, habit_id, note, completed_at')
           .eq('user_id', user?.id)
           .gte('completed_at', startOfDay.toISOString())
           .lte('completed_at', endOfDay.toISOString())
@@ -55,14 +55,27 @@ export default function Diary() {
           .maybeSingle()
       ])
 
-      const fetchedActivities = (completionsRes.data ?? []).map((c: any) => ({
+      const completionRows = completionsRes.data ?? []
+      const habitIds = [...new Set(completionRows.map((c) => c.habit_id))]
+      const habitsById: Record<string, { title: string; kind: string; description: string | null }> = {}
+      if (habitIds.length > 0) {
+        const { data: habitsData } = await supabase
+          .from('habits')
+          .select('id, title, kind, description')
+          .in('id', habitIds)
+        ;(habitsData ?? []).forEach((h) => {
+          habitsById[h.id] = { title: h.title, kind: h.kind, description: h.description }
+        })
+      }
+
+      const fetchedActivities = completionRows.map((c) => ({
         id: c.id,
         habit_id: c.habit_id,
         note: c.note,
         completed_at: c.completed_at,
-        habitTitle: c.habits?.title || 'Unknown',
-        habitKind: c.habits?.kind || 'habit',
-        habitDesc: c.habits?.description || null
+        habitTitle: habitsById[c.habit_id]?.title || 'Unknown',
+        habitKind: habitsById[c.habit_id]?.kind || 'habit',
+        habitDesc: habitsById[c.habit_id]?.description || null
       }))
 
       setActivities(fetchedActivities)

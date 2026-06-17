@@ -123,12 +123,18 @@ export default function Today() {
       endObj.setDate(endObj.getDate() + 1)
       const end = endObj.toISOString()
       
-      const [{ data: habitsData }, { data: completionData }, { data: timetableData }, { data: projectsData }] = await Promise.all([
+      const [{ data: activeHabits }, { data: archivedTasks }, { data: completionData }, { data: timetableData }, { data: projectsData }] = await Promise.all([
         supabase
           .from('habits')
           .select('id, title, description, kind, is_archived, metadata')
           .eq('user_id', user?.id)
           .eq('is_archived', false),
+        supabase
+          .from('habits')
+          .select('id, title, description, kind, is_archived, metadata')
+          .eq('user_id', user?.id)
+          .eq('is_archived', true)
+          .eq('kind', 'task'),
         supabase
           .from('completions')
         .select('id, habit_id, note')
@@ -146,7 +152,15 @@ export default function Today() {
           .eq('is_archived', false)
       ])
 
-      const filteredHabits = (habitsData ?? [])
+      const habitsData = [
+        ...(activeHabits ?? []),
+        ...(archivedTasks ?? []).filter((t) => {
+          const matchesTargetDate = !t.metadata?.target_date || t.metadata.target_date === selectedDate
+          const completedOnDay = (completionData ?? []).some((c) => c.habit_id === t.id)
+          return matchesTargetDate || completedOnDay
+        }),
+      ]
+      const filteredHabits = habitsData
         .filter((h) => {
           if (h.kind === 'task') {
             if (h.metadata?.target_date && h.metadata.target_date !== selectedDate) return false
@@ -205,7 +219,6 @@ export default function Today() {
   const handleToggleCompletion = async (habitId: string) => {
     if (!user) return
     setSavingHabitIds((c) => new Set(c).add(habitId))
-    const habit = habits.find((h) => h.id === habitId)
     const isCompleted = !!completedLogs[habitId]?.length
     let error
     if (isCompleted) {
@@ -217,9 +230,6 @@ export default function Today() {
       const { error: deleteError } = await supabase.from('completions').delete()
         .eq('user_id', user.id).eq('habit_id', habitId).gte('completed_at', start).lt('completed_at', end)
       error = deleteError
-      if (!error && habit?.kind === 'task') {
-        await supabase.from('habits').update({ is_archived: false }).eq('id', habitId)
-      }
     } else {
       const dateToSave = isToday ? new Date().toISOString() : new Date(`${selectedDate}T12:00:00`).toISOString()
       const { error: insertError, data } = await supabase.from('completions').insert([
@@ -228,9 +238,6 @@ export default function Today() {
       error = insertError
       if (!error && data) {
         setCompletedLogs((c) => ({ ...c, [habitId]: [{ id: data.id, note: null }] }))
-        if (habit?.kind === 'task') {
-          await supabase.from('habits').update({ is_archived: true }).eq('id', habitId)
-        }
       }
     }
     setSavingHabitIds((c) => { const n = new Set(c); n.delete(habitId); return n })
